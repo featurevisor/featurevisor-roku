@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component name="FeatureVisorAgent" extends="Node">
+  <interface>
+    <!-- Events -->
+    <field id="activated" type="assocarray" alwaysNotify="true" value="{}" />
+    <field id="ready" type="assocarray" alwaysNotify="true" value="{}" />
+    <field id="refreshed" type="assocarray" alwaysNotify="true" value="{}" />
+    <field id="updated" type="assocarray" alwaysNotify="true" value="{}" />
+
+    <!-- Functions -->
+    <function name="activate" />
+    <function name="clear" />
+    <function name="evaluateFlag" />
+    <function name="evaluateVariable" />
+    <function name="evaluateVariation" />
+    <function name="getFeature" />
+    <function name="getRevision" />
+    <function name="getVariable" />
+    <function name="getVariableArray" />
+    <function name="getVariableBoolean" />
+    <function name="getVariableDouble" />
+    <function name="getVariableInteger" />
+    <function name="getVariableJSON" />
+    <function name="getVariableObject" />
+    <function name="getVariableString" />
+    <function name="getVariation" />
+    <function name="initialize" />
+    <function name="isEnabled" />
+    <function name="refresh" />
+    <function name="setDatafile" />
+    <function name="setStickyFeatures" />
+    <function name="startRefreshing" />
+    <function name="stopRefreshing" />
+  </interface>
+
+  <script type="text/brightscript" uri="FeatureVisor.agent.brs" />
+</component>

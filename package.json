@@ -1,0 +1,63 @@
+{
+  "name": "@featurevisor/roku",
+  "version": "0.1.0",
+  "description": "Roku FeatureVisor SDK",
+  "keywords": [
+    "brightscript",
+    "kopytko",
+    "kopytko-module",
+    "roku",
+    "featurevisor",
+    "feature",
+    "features",
+    "flags",
+    "feature flags",
+    "feature toggles",
+    "feature management",
+    "experimentation",
+    "experiment",
+    "experiments"
+  ],
+  "author": "Błażej Chełkowski <bchelkow@gmail.com>",
+  "files": [
+    "kopytkoSrc",
+    "!**/_tests"
+  ],
+  "scripts": {
+    "lint": "eslint --ext .brs kopytkoSrc/",
+    "test": "node node_modules/@dazn/kopytko-unit-testing-framework/scripts/test.js"
+  },
+  "dependencies": {
+    "@dazn/kopytko-framework": "^3.0.0",
+    "@dazn/kopytko-utils": "^2.6.0",
+    "compare-versions-roku": "^1.0.0",
+    "murmurhash-roku": "^1.0.0"
+  },
+  "devDependencies": {
+    "@dazn/eslint-plugin-kopytko": "^2.1.0",
+    "@dazn/kopytko-unit-testing-framework": "^2.4.1",
+    "eslint": "8.57.0"
+  },
+  "license": "MIT",
+  "kopytkoModuleDir": "src/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/featurevisor/featurevisor-roku.git"
+  },
+  "bugs": {
+    "url": "https://github.com/featurevisor/featurevisor-roku/issues"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/changelog",
+      "@semantic-release/git",
+      "@semantic-release/github"
+    ]
+  }
+}
