@@ -47,6 +47,10 @@
   "bugs": {
     "url": "https://github.com/featurevisor/featurevisor-roku/issues"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "release": {
     "branches": [
       "main"
