@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<component name="FeatureVisorAgent" extends="Node">
+<component name="FeaturevisorInstance" extends="Node">
   <interface>
     <!-- Events -->
     <field id="activated" type="assocarray" alwaysNotify="true" value="{}" />
@@ -34,5 +34,5 @@
     <function name="stopRefreshing" />
   </interface>
 
-  <script type="text/brightscript" uri="FeatureVisor.agent.brs" />
+  <script type="text/brightscript" uri="Featurevisor.instance.brs" />
 </component>

@@ -3,17 +3,17 @@
 ' @import /components/promise/PromiseReject.brs from @dazn/kopytko-utils
 ' @import /components/promise/PromiseResolve.brs from @dazn/kopytko-utils
 
-function TestSuite__FeatureVisorFacade() as Object
+function TestSuite__FeaturevisorSDK() as Object
   ts = KopytkoTestSuite()
-  ts.name = "FeatureVisorFacade"
+  ts.name = "FeaturevisorSDK"
 
   beforeEach(sub (_ts as Object)
-    m.__featureVisorFacade = FeatureVisorFacade()
+    m.__featurevisorSDK = FeaturevisorSDK()
   end sub)
 
   afterEach(sub (_ts as Object)
-    m.__featureVisorFacade.clear()
-    m.__featureVisorFacade = Invalid
+    m.__featurevisorSDK.clear()
+    m.__featurevisorSDK = Invalid
   end sub)
 
   it("should call onReady when initialized", function (_ts as Object) as Object
@@ -21,10 +21,10 @@ function TestSuite__FeatureVisorFacade() as Object
     passedContext = { readyCount: 0 }
 
     ' When
-    m.__featureVisorFacade.onReady(sub ()
+    m.__featurevisorSDK.onReady(sub ()
       m.readyCount += 1
     end sub, passedContext)
-    m.__featureVisorFacade.initialize({
+    m.__featurevisorSDK.createInstance({
       datafile: {
         schemaVersion: "1",
         revision: "1.0",
@@ -37,7 +37,7 @@ function TestSuite__FeatureVisorFacade() as Object
     ' Then
     return [
       expect(passedContext.readyCount).toBe(1),
-      expect(m.__featureVisorFacade.isReady()).toBeTrue()
+      expect(m.__featurevisorSDK.isReady()).toBeTrue()
     ]
   end function)
 
@@ -46,7 +46,7 @@ function TestSuite__FeatureVisorFacade() as Object
     passedContext = { activated: false }
 
     ' When
-    m.__featureVisorFacade.initialize({
+    m.__featurevisorSDK.createInstance({
       onActivation: {
         callback: sub (_payload as Object)
           m.activated = true
@@ -80,7 +80,7 @@ function TestSuite__FeatureVisorFacade() as Object
     })
 
     ' Then
-    activatedVariation = m.__featureVisorFacade.activate("test", {
+    activatedVariation = m.__featurevisorSDK.activate("test", {
       userId: "123",
     })
 

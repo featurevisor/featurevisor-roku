@@ -1,24 +1,24 @@
 ' @import /components/getProperty.brs from @dazn/kopytko-utils
 ' @import /components/getType.brs from @dazn/kopytko-utils
 
-function FeatureVisorFacade() as Object
+function FeaturevisorSDK() as Object
   prototype = {}
 
-  prototype._featureVisorAgent = Invalid
+  prototype._featurevisorInstance = Invalid
   prototype._isReady = false
   prototype._onActivation = { callback: Invalid, context: Invalid }
   prototype._onReady = { callback: Invalid, context: Invalid }
   prototype._onRefresh = { callback: Invalid, context: Invalid }
   prototype._onUpdate = { callback: Invalid, context: Invalid }
 
-  prototype.initialize = function (options as Object, featureVisorAgent = Invalid as Object) as Object
+  prototype.createInstance = function (options as Object, featurevisorInstance = Invalid as Object) as Object
     m.clear()
 
-    if (featureVisorAgent = Invalid)
-      featureVisorAgent = CreateObject("roSGNode", "FeatureVisorAgent")
+    if (featurevisorInstance = Invalid)
+      featurevisorInstance = CreateObject("roSGNode", "FeaturevisorInstance")
     end if
 
-    m._featureVisorAgent = featureVisorAgent
+    m._featurevisorInstance = featurevisorInstance
 
     if (getType(getProperty(options, ["onActivation", "callback"])) = "roFunction")
       m.onActivation(options.onActivation.callback, options.onActivation.context)
@@ -44,26 +44,26 @@ function FeatureVisorFacade() as Object
       m.onUpdate(m._onUpdate.callback, m._onUpdate.context)
     end if
 
-    featureVisorAgent.callFunc("initialize", options)
+    featurevisorInstance.callFunc("initialize", options)
 
-    return featureVisorAgent
+    return featurevisorInstance
   end function
 
   prototype.activate = function (feature as Dynamic, context = {} as Object) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("activate", feature, context)
+    return m._featurevisorInstance.callFunc("activate", feature, context)
   end function
 
   prototype.clear = sub (options = {} as Object)
-    if (m._featureVisorAgent = Invalid) then return
+    if (m._featurevisorInstance = Invalid) then return
 
     m._isReady = false
 
-    m._featureVisorAgent.unobserveFieldScoped("activated")
-    m._featureVisorAgent.unobserveFieldScoped("ready")
-    m._featureVisorAgent.unobserveFieldScoped("refreshed")
-    m._featureVisorAgent.unobserveFieldScoped("updated")
+    m._featurevisorInstance.unobserveFieldScoped("activated")
+    m._featurevisorInstance.unobserveFieldScoped("ready")
+    m._featurevisorInstance.unobserveFieldScoped("refreshed")
+    m._featurevisorInstance.unobserveFieldScoped("updated")
 
     if (getProperty(options, "clearCallbackDefinitions", false))
       m._onActivation = { callback: Invalid, context: Invalid }
@@ -72,97 +72,97 @@ function FeatureVisorFacade() as Object
       m._onUpdate = { callback: Invalid, context: Invalid }
     end if
 
-    m._featureVisorAgent.callFunc("clear")
+    m._featurevisorInstance.callFunc("clear")
   end sub
 
   prototype.evaluateFlag = function (featureKey as String, context = {} as Object) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("evaluateFlag", featureKey, context)
+    return m._featurevisorInstance.callFunc("evaluateFlag", featureKey, context)
   end function
 
   prototype.evaluateVariable = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("evaluateVariable", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("evaluateVariable", feature, variableKey, context)
   end function
 
   prototype.evaluateVariation = function (feature as Dynamic, context = {} as Object) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("evaluateVariation", feature, context)
+    return m._featurevisorInstance.callFunc("evaluateVariation", feature, context)
   end function
 
   prototype.getFeature = function (feature as Dynamic) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("getFeature", feature)
+    return m._featurevisorInstance.callFunc("getFeature", feature)
   end function
 
   prototype.getRevision = function () as String
-    if (m._featureVisorAgent = Invalid) then return ""
+    if (m._featurevisorInstance = Invalid) then return ""
 
-    return m._featureVisorAgent.callFunc("getRevision")
+    return m._featurevisorInstance.callFunc("getRevision")
   end function
 
   prototype.getVariable = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("getVariable", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariable", feature, variableKey, context)
   end function
 
   prototype.getVariableArray = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("getVariableArray", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableArray", feature, variableKey, context)
   end function
 
   prototype.getVariableBoolean = function (feature as Dynamic, variableKey as String, context = {} as Object) as Boolean
-    if (m._featureVisorAgent = Invalid) then return false
+    if (m._featurevisorInstance = Invalid) then return false
 
-    return m._featureVisorAgent.callFunc("getVariableBoolean", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableBoolean", feature, variableKey, context)
   end function
 
   prototype.getVariableDouble = function (feature as Dynamic, variableKey as String, context = {} as Object) as Float
-    if (m._featureVisorAgent = Invalid) then return 0
+    if (m._featurevisorInstance = Invalid) then return 0
 
-    return m._featureVisorAgent.callFunc("getVariableDouble", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableDouble", feature, variableKey, context)
   end function
 
   prototype.getVariableInteger = function (feature as Dynamic, variableKey as String, context = {} as Object) as Integer
-    if (m._featureVisorAgent = Invalid) then return 0
+    if (m._featurevisorInstance = Invalid) then return 0
 
-    return m._featureVisorAgent.callFunc("getVariableInteger", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableInteger", feature, variableKey, context)
   end function
 
   prototype.getVariableJSON = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("getVariableJSON", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableJSON", feature, variableKey, context)
   end function
 
   prototype.getVariableObject = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("getVariableObject", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableObject", feature, variableKey, context)
   end function
 
   prototype.getVariableString = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("getVariableString", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableString", feature, variableKey, context)
   end function
 
   prototype.getVariation = function (feature as Dynamic, context = {} as Object) as Dynamic
-    if (m._featureVisorAgent = Invalid) then return Invalid
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featureVisorAgent.callFunc("getVariation", feature, context)
+    return m._featurevisorInstance.callFunc("getVariation", feature, context)
   end function
 
   prototype.isEnabled = function (featureKey as String, context = {} as Object) as Boolean
-    if (m._featureVisorAgent = Invalid) then return false
+    if (m._featurevisorInstance = Invalid) then return false
 
-    return m._featureVisorAgent.callFunc("isEnabled", featureKey, context)
+    return m._featurevisorInstance.callFunc("isEnabled", featureKey, context)
   end function
 
   prototype.isReady = function () as Boolean
@@ -172,92 +172,92 @@ function FeatureVisorFacade() as Object
   prototype.onActivation = sub (func as Function, context = Invalid as Object)
     m._onActivation = { callback: func, context: context }
 
-    if (m._featureVisorAgent <> Invalid)
-      m._featureVisorAgent.unobserveFieldScoped("activated")
-      m._featureVisorAgent.observeFieldScoped("activated", "FeatureVisor_onActivation")
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("activated")
+      m._featurevisorInstance.observeFieldScoped("activated", "Featurevisor_onActivation")
     end if
   end sub
 
   prototype.onReady = sub (func as Function, context = Invalid as Object)
     m._onReady = { callback: func, context: context }
 
-    if (m._featureVisorAgent <> Invalid)
-      m._featureVisorAgent.unobserveFieldScoped("ready")
-      m._featureVisorAgent.observeFieldScoped("ready", "FeatureVisor_onReady")
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("ready")
+      m._featurevisorInstance.observeFieldScoped("ready", "Featurevisor_onReady")
     end if
   end sub
 
   prototype.onRefresh = sub (func as Function, context = Invalid as Object)
     m._onRefresh = { callback: func, context: context }
 
-    if (m._featureVisorAgent <> Invalid)
-      m._featureVisorAgent.unobserveFieldScoped("refreshed")
-      m._featureVisorAgent.observeFieldScoped("refreshed", "FeatureVisor_onRefresh")
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("refreshed")
+      m._featurevisorInstance.observeFieldScoped("refreshed", "Featurevisor_onRefresh")
     end if
   end sub
 
   prototype.onUpdate = sub (func as Function, context = Invalid as Object)
     m._onUpdate = { callback: func, context: context }
 
-    if (m._featureVisorAgent <> Invalid)
-      m._featureVisorAgent.unobserveFieldScoped("updated")
-      m._featureVisorAgent.observeFieldScoped("updated", "FeatureVisor_onUpdate")
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("updated")
+      m._featurevisorInstance.observeFieldScoped("updated", "Featurevisor_onUpdate")
     end if
   end sub
 
   prototype.refresh = sub ()
-    if (m._featureVisorAgent = Invalid) then return
+    if (m._featurevisorInstance = Invalid) then return
 
-    m._featureVisorAgent.callFunc("refresh")
+    m._featurevisorInstance.callFunc("refresh")
   end sub
 
   prototype.setDatafile = sub (datafile as Dynamic)
-    if (m._featureVisorAgent = Invalid) then return
+    if (m._featurevisorInstance = Invalid) then return
 
-    m._featureVisorAgent.callFunc("setDatafile", datafile)
+    m._featurevisorInstance.callFunc("setDatafile", datafile)
   end sub
 
   prototype.setStickyFeatures = sub (stickyFeatures as Object)
-    if (m._featureVisorAgent = Invalid) then return
+    if (m._featurevisorInstance = Invalid) then return
 
-    m._featureVisorAgent.callFunc("setStickyFeatures", stickyFeatures)
+    m._featurevisorInstance.callFunc("setStickyFeatures", stickyFeatures)
   end sub
 
   prototype.startRefreshing = sub ()
-    if (m._featureVisorAgent = Invalid) then return
+    if (m._featurevisorInstance = Invalid) then return
 
-    m._featureVisorAgent.callFunc("startRefreshing")
+    m._featurevisorInstance.callFunc("startRefreshing")
   end sub
 
   prototype.stopRefreshing = sub ()
-    if (m._featureVisorAgent = Invalid) then return
+    if (m._featurevisorInstance = Invalid) then return
 
-    m._featureVisorAgent.callFunc("stopRefreshing")
+    m._featurevisorInstance.callFunc("stopRefreshing")
   end sub
 
-  m["$$FeatureVisorFacade"] = prototype
+  m["$$FeaturevisorSDK"] = prototype
 
   return prototype
 end function
 
-sub FeatureVisor_onActivation(event as Object)
-  FeatureVisor_callback("$$FeatureVisorFacade_onActivation", m["$$FeatureVisorFacade"]._onActivation, event.getData())
+sub Featurevisor_onActivation(event as Object)
+  Featurevisor_callback("$$FeaturevisorSDK_onActivation", m["$$FeaturevisorSDK"]._onActivation, event.getData())
 end sub
 
-sub FeatureVisor_onReady(_event as Object)
-  m["$$FeatureVisorFacade"]._isReady = true
-  FeatureVisor_callback("$$FeatureVisorFacade_onReady", m["$$FeatureVisorFacade"]._onReady)
+sub Featurevisor_onReady(_event as Object)
+  m["$$FeaturevisorSDK"]._isReady = true
+  Featurevisor_callback("$$FeaturevisorSDK_onReady", m["$$FeaturevisorSDK"]._onReady)
 end sub
 
-sub FeatureVisor_onRefresh(_event as Object)
-  FeatureVisor_callback("$$FeatureVisorFacade_onRefresh", m["$$FeatureVisorFacade"]._onRefresh)
+sub Featurevisor_onRefresh(_event as Object)
+  Featurevisor_callback("$$FeaturevisorSDK_onRefresh", m["$$FeaturevisorSDK"]._onRefresh)
 end sub
 
-sub FeatureVisor_onUpdate(_event as Object)
-  FeatureVisor_callback("$$FeatureVisorFacade_onUpdate", m["$$FeatureVisorFacade"]._onUpdate)
+sub Featurevisor_onUpdate(_event as Object)
+  Featurevisor_callback("$$FeaturevisorSDK_onUpdate", m["$$FeaturevisorSDK"]._onUpdate)
 end sub
 
-sub FeatureVisor_callback(key as String, callbackData as Object, data = Invalid as Object)
+sub Featurevisor_callback(key as String, callbackData as Object, data = Invalid as Object)
   if (getType(callbackData.callback) <> "roFunction") then return
 
   if (callbackData.context <> Invalid)

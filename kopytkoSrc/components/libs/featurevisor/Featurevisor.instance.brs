@@ -5,46 +5,48 @@
 ' @import /components/getType.brs from @dazn/kopytko-utils
 ' @import /components/timers/clearInterval.brs from @dazn/kopytko-utils
 ' @import /components/timers/setInterval.brs from @dazn/kopytko-utils
-' @import /components/libs/featureVisor/FeatureVisorBucket.brs
-' @import /components/libs/featureVisor/FeatureVisorConditions.brs
-' @import /components/libs/featureVisor/FeatureVisorDatafileReader.brs
-' @import /components/libs/featureVisor/FeatureVisorEvaluationReason.const.brs
-' @import /components/libs/featureVisor/FeatureVisorFeature.brs
-' @import /components/libs/featureVisor/FeatureVisorSegments.brs
+' @import /components/libs/featurevisor/FeaturevisorBucket.brs
+' @import /components/libs/featurevisor/FeaturevisorConditions.brs
+' @import /components/libs/featurevisor/FeaturevisorDatafileReader.brs
+' @import /components/libs/featurevisor/FeaturevisorEvaluationReason.const.brs
+' @import /components/libs/featurevisor/FeaturevisorFeature.brs
+' @import /components/libs/featurevisor/FeaturevisorSegments.brs
 
 sub init()
   m._DEFAULT_BUCKET_KEY_SEPARATOR = "."
 
   m._arrayUtils = ArrayUtils()
-  m._bucketKeySeparator = m._DEFAULT_BUCKET_KEY_SEPARATOR
-  m._datafileReader = Invalid
-  m._datafileUrl = ""
-  m._featureVisorEvaluationReason = FeatureVisorEvaluationReason()
-  m._refreshInterval = 0
+  m._featurevisorEvaluationReason = FeaturevisorEvaluationReason()
   m._statuses = {
     ready: false,
     refreshInProgress: false,
   }
-  m._stickyFeatures = {}
+
+  m._bucketKeySeparator = m._DEFAULT_BUCKET_KEY_SEPARATOR
+  m._configureAndInterceptStaticContext = Invalid
+  m._configureBucketKey = Invalid
+  m._configureBucketValue = Invalid
+  m._datafileReader = Invalid
+  m._datafileUrl = ""
+  m._initialFeatures = Invalid
+  m._interceptContext = Invalid
+  m._refreshInterval = 0
+  m._stickyFeatures = Invalid
 end sub
 
 sub initialize(options = {} as Object)
   m._bucketKeySeparator = getProperty(options, ["bucketKeySeparator"], m._DEFAULT_BUCKET_KEY_SEPARATOR)
-  m._configureAndInterceptStaticContext = getProperty(options, ["configureAndInterceptStaticContext"])
-  m._configureBucketKey = getProperty(options, ["configureBucketKey"])
-  m._configureBucketValue = getProperty(options, ["configureBucketValue"])
-  m._datafileReader = Invalid
-  m._datafileUrl = getProperty(options, ["datafileUrl"], "")
-  m._initialFeatures = getProperty(options, ["initialFeatures"])
-  m._interceptContext = getProperty(options, ["interceptContext"])
-  m._refreshInterval = getProperty(options, ["refreshInterval"], 0)
-  m._statuses = {
-    ready: false,
-    refreshInProgress: false,
-  }
-  m._stickyFeatures = getProperty(options, ["stickyFeatures"])
+  m._configureAndInterceptStaticContext = getProperty(options, ["configureAndInterceptStaticContext"], m._configureAndInterceptStaticContext)
+  m._configureBucketKey = getProperty(options, ["configureBucketKey"], m._configureBucketKey)
+  m._configureBucketValue = getProperty(options, ["configureBucketValue"], m._configureBucketValue)
+  m._datafileUrl = getProperty(options, ["datafileUrl"], m._datafileUrl)
+  m._initialFeatures = getProperty(options, ["initialFeatures"], m._initialFeatures)
+  m._interceptContext = getProperty(options, ["interceptContext"], m._interceptContext)
+  m._refreshInterval = getProperty(options, ["refreshInterval"], m._refreshInterval)
+  m._stickyFeatures = getProperty(options, ["stickyFeatures"], m._stickyFeatures)
 
-  if (m._datafileUrl <> "")
+  if (NOT m._statuses.ready AND m._datafileUrl <> "")
+    m._datafileReader = Invalid
     datafile = getProperty(options, ["datafile"], {
       schemaVersion: "1",
       revision: "unknown",
@@ -54,7 +56,7 @@ sub initialize(options = {} as Object)
     })
     setDatafile(datafile)
 
-    chain = createRequest("FeatureVisorRequest", { datafileUrl: m._datafileUrl })
+    chain = createRequest("FeaturevisorRequest", { datafileUrl: m._datafileUrl })
     chain.then(sub (datafile as Object, m as Object)
       setDatafile(datafile)
 
@@ -65,12 +67,13 @@ sub initialize(options = {} as Object)
         startRefreshing()
       end if
     end sub, sub (error as Object, _m as Object)
-      print "FeatureVisor - failed to reffetchresh datafile: ";error
+      print "Featurevisor - failed to reffetchresh datafile: ";error
     end sub, m)
     chain.finally(sub (_data as Object, m as Object)
       m._statuses.refreshInProgress = false
     end sub, m)
   else if (options.datafile <> Invalid)
+    m._datafileReader = Invalid
     setDatafile(options.datafile)
 
     m._statuses.ready = true
@@ -125,8 +128,8 @@ function activate(feature as Dynamic, context = {} as Object) as Object
 
     return variationValue
   catch error
-    print "FeatureVisor - activate - featureKey: ";featureKey
-    _printError("FeatureVisor - activate - error", error)
+    print "Featurevisor - activate - featureKey: ";featureKey
+    _printError("Featurevisor - activate - error", error)
 
     return Invalid
   end try
@@ -139,7 +142,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
       return {
         enabled: getProperty(m._stickyFeatures, [featureKey, "enabled"]),
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.STICKY,
+        reason: m._featurevisorEvaluationReason.STICKY,
         sticky: getProperty(m._stickyFeatures, [featureKey]),
       }
     end if
@@ -150,7 +153,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
         enabled: getProperty(m._initialFeatures, [featureKey, "enabled"]),
         featureKey: featureKey,
         initial: getProperty(m._initialFeatures, [featureKey]),
-        reason: m._featureVisorEvaluationReason.INITIAL,
+        reason: m._featurevisorEvaluationReason.INITIAL,
       }
     end if
 
@@ -160,25 +163,25 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
     if (feature = Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.NOT_FOUND,
+        reason: m._featurevisorEvaluationReason.NOT_FOUND,
       }
     end if
 
     ' deprecated
     if (getProperty(feature, ["deprecated"], false))
-      print "FeatureVisor - feature is deprecated"
+      print "Featurevisor - feature is deprecated"
     end if
 
     finalContext = _interceptContext(context)
 
     ' forced
-    force = featureVisorFindForceFromFeature(feature, context, m._datafileReader)
+    force = featurevisorFindForceFromFeature(feature, context, m._datafileReader)
 
     if (getProperty(force, ["enabled"]) <> Invalid)
       return {
         enabled: getProperty(force, ["enabled"]),
         featureKey: feature.key,
-        reason: m._featureVisorEvaluationReason.FORCED,
+        reason: m._featurevisorEvaluationReason.FORCED,
       }
     end if
 
@@ -211,14 +214,14 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
         return {
           enabled: requiredFeaturesAreEnabled,
           featureKey: feature.key,
-          reason: m._featureVisorEvaluationReason.REQUIRED,
+          reason: m._featurevisorEvaluationReason.REQUIRED,
         }
       end if
     end if
 
     ' bucketing
     bucketValue = _getBucketValue(feature, finalContext)
-    matchedTraffic = featureVisorGetMatchedTraffic(feature.traffic, finalContext, m._datafileReader)
+    matchedTraffic = featurevisorGetMatchedTraffic(feature.traffic, finalContext, m._datafileReader)
 
     if (matchedTraffic <> Invalid)
       ' check if mutually exclusive
@@ -233,7 +236,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
             bucketValue: bucketValue,
             enabled: getProperty(matchedTraffic, ["enabled"], true),
             featureKey: feature.key,
-            reason: m._featureVisorEvaluationReason.ALLOCATED,
+            reason: m._featurevisorEvaluationReason.ALLOCATED,
           }
         end if
 
@@ -242,7 +245,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
           bucketValue: bucketValue,
           enabled: false,
           featureKey: feature.key,
-          reason: m._featureVisorEvaluationReason.OUT_OF_RANGE,
+          reason: m._featurevisorEvaluationReason.OUT_OF_RANGE,
         }
       end if
 
@@ -252,7 +255,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
           bucketValue: bucketValue,
           enabled: matchedTraffic.enabled,
           featureKey: feature.key,
-          reason: m._featureVisorEvaluationReason.OVERRIDE,
+          reason: m._featurevisorEvaluationReason.OVERRIDE,
           ruleKey: matchedTraffic.key,
           traffic: matchedTraffic,
         }
@@ -264,7 +267,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
           bucketValue: bucketValue,
           enabled: true,
           featureKey: feature.key,
-          reason: m._featureVisorEvaluationReason.RULE,
+          reason: m._featurevisorEvaluationReason.RULE,
           ruleKey: matchedTraffic.key,
           traffic: matchedTraffic,
         }
@@ -276,15 +279,15 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
       bucketValue: bucketValue,
       enabled: false,
       featureKey: featureKey,
-      reason: m._featureVisorEvaluationReason.ERROR,
+      reason: m._featurevisorEvaluationReason.ERROR,
     }
   catch error
-    _printError("FeatureVisor - evaluateFlag - error", error)
+    _printError("Featurevisor - evaluateFlag - error", error)
 
     return {
       error: error,
       featureKey: featureKey,
-      reason: m._featureVisorEvaluationReason.ERROR,
+      reason: m._featurevisorEvaluationReason.ERROR,
     }
   end try
 end function
@@ -302,7 +305,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     if (flag.enabled = false)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.DISABLED,
+        reason: m._featurevisorEvaluationReason.DISABLED,
       }
     end if
 
@@ -310,7 +313,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     if (getProperty(m._stickyFeatures, [featureKey, "variables", variableKey]) <> Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.STICKY,
+        reason: m._featurevisorEvaluationReason.STICKY,
         variableKey: variableKey,
         variableValue: getProperty(m._stickyFeatures, [featureKey, "variables", variableKey]),
       }
@@ -320,7 +323,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     if (NOT m._statuses.ready AND getProperty(m._initialFeatures, [featureKey, "variables", variableKey]) <> Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.INITIAL,
+        reason: m._featurevisorEvaluationReason.INITIAL,
         variableKey: variableKey,
         variableValue: getProperty(m._initialFeatures, [featureKey, "variables", variableKey]),
       }
@@ -332,7 +335,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     if (feature = Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.NOT_FOUND,
+        reason: m._featurevisorEvaluationReason.NOT_FOUND,
         variableKey: variableKey,
       }
     end if
@@ -346,7 +349,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     if (variableSchema = Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.NOT_FOUND,
+        reason: m._featurevisorEvaluationReason.NOT_FOUND,
         variableKey: variableKey,
       }
     end if
@@ -354,12 +357,12 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     finalContext = _interceptContext(context)
 
     ' forced
-    force = featureVisorFindForceFromFeature(feature, context, m._datafileReader)
+    force = featurevisorFindForceFromFeature(feature, context, m._datafileReader)
 
     if (getProperty(force, ["variables", variableKey]) <> Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.FORCED,
+        reason: m._featurevisorEvaluationReason.FORCED,
         variableKey: variableKey,
         variableSchema: variableSchema,
         variableValue: force.variables[variableKey],
@@ -368,7 +371,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
 
     ' bucketing
     bucketValue = _getBucketValue(feature, finalContext)
-    matched = featureVisorGetMatchedTrafficAndAllocation(feature.traffic, finalContext, bucketValue, m._datafileReader)
+    matched = featurevisorGetMatchedTrafficAndAllocation(feature.traffic, finalContext, bucketValue, m._datafileReader)
 
     if (matched.matchedTraffic <> Invalid)
       ' override from rule
@@ -376,7 +379,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
         return {
           bucketValue: bucketValue,
           featureKey: featureKey,
-          reason: m._featureVisorEvaluationReason.RULE,
+          reason: m._featurevisorEvaluationReason.RULE,
           ruleKey: matched.matchedTraffic.key,
           variableKey: variableKey,
           variableSchema: variableSchema,
@@ -403,16 +406,16 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
               override = m._arrayUtils.find(variableFromVariation.overrides, function (override as Object, context as Object) as Boolean
                 if (override.conditions <> Invalid)
                   if (getType(override.conditions) = "roString")
-                    return featureVisorAllConditionsAreMatched(ParseJson(override.conditions), context.finalContext)
+                    return featurevisorAllConditionsAreMatched(ParseJson(override.conditions), context.finalContext)
                   end if
 
-                  return featureVisorAllConditionsAreMatched(override.conditions, context.finalContext)
+                  return featurevisorAllConditionsAreMatched(override.conditions, context.finalContext)
                 end if
 
                 if (override.segments <> Invalid)
-                  parsed = featureVisorParseFromStringifiedSegments(override.segments)
+                  parsed = featurevisorParseFromStringifiedSegments(override.segments)
 
-                  return featureVisorAllGroupSegmentsAreMatched(parsed, context.finalContext, context.datafileReader)
+                  return featurevisorAllGroupSegmentsAreMatched(parsed, context.finalContext, context.datafileReader)
                 end if
 
                 return false
@@ -422,7 +425,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
                 return {
                   bucketValue: bucketValue,
                   featureKey: featureKey,
-                  reason: m._featureVisorEvaluationReason.OVERRIDE,
+                  reason: m._featurevisorEvaluationReason.OVERRIDE,
                   ruleKey: matched.matchedTraffic.key,
                   variableKey: variableKey,
                   variableSchema: variableSchema,
@@ -435,7 +438,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
               return {
                 bucketValue: bucketValue,
                 featureKey: featureKey,
-                reason: m._featureVisorEvaluationReason.ALLOCATED,
+                reason: m._featurevisorEvaluationReason.ALLOCATED,
                 ruleKey: matched.matchedTraffic.key,
                 variableKey: variableKey,
                 variableSchema: variableSchema,
@@ -451,18 +454,18 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     return {
       bucketValue: bucketValue,
       featureKey: featureKey,
-      reason: m._featureVisorEvaluationReason.DEFAULTED,
+      reason: m._featurevisorEvaluationReason.DEFAULTED,
       variableKey: variableKey,
       variableSchema: variableSchema,
       variableValue: variableSchema.defaultValue,
     }
   catch error
-    _printError("FeatureVisor - evaluateVariable - error", error)
+    _printError("Featurevisor - evaluateVariable - error", error)
 
     return {
       error: error,
       featureKey: featureKey,
-      reason: m._featureVisorEvaluationReason.ERROR,
+      reason: m._featurevisorEvaluationReason.ERROR,
       variableKey: variableKey,
     }
   end try
@@ -481,7 +484,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     if (flag.enabled <> Invalid AND NOT flag.enabled)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.DISABLED,
+        reason: m._featurevisorEvaluationReason.DISABLED,
       }
     end if
 
@@ -490,7 +493,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
       variationValue = m._stickyFeatures[featureKey].variation
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.STICKY,
+        reason: m._featurevisorEvaluationReason.STICKY,
         variationValue: getProperty(m._stickyFeatures, [featureKey, "variation"]),
       }
     end if
@@ -499,7 +502,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     if (NOT m._statuses.ready AND getProperty(m._initialFeatures, [featureKey, "variation"]) <> Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.INITIAL,
+        reason: m._featurevisorEvaluationReason.INITIAL,
         variationValue: getProperty(m._initialFeatures, [featureKey, "variation"]),
       }
     end if
@@ -510,7 +513,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     if (feature = Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.NOT_FOUND,
+        reason: m._featurevisorEvaluationReason.NOT_FOUND,
       }
     end if
 
@@ -518,14 +521,14 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     if (feature.variations = Invalid OR feature.variations.count() = 0)
       return {
         featureKey: featureKey,
-        reason: m._featureVisorEvaluationReason.NO_VARIATIONS,
+        reason: m._featurevisorEvaluationReason.NO_VARIATIONS,
       }
     end if
 
     finalContext = _interceptContext(context)
 
     ' forced
-    force = featureVisorFindForceFromFeature(feature, context, m._datafileReader)
+    force = featurevisorFindForceFromFeature(feature, context, m._datafileReader)
 
     if (force <> Invalid AND force.variation <> Invalid)
       variation = m._arrayUtils.find(feature.variations, { value: force.variation })
@@ -533,7 +536,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
       if (variation <> Invalid)
         return {
           featureKey: featureKey,
-          reason: m._featureVisorEvaluationReason.FORCED,
+          reason: m._featurevisorEvaluationReason.FORCED,
           variation: variation,
         }
       end if
@@ -541,7 +544,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
 
     ' bucketing
     bucketValue = _getBucketValue(feature, finalContext)
-    matched = featureVisorGetMatchedTrafficAndAllocation(feature.traffic, finalContext, bucketValue, m._datafileReader)
+    matched = featurevisorGetMatchedTrafficAndAllocation(feature.traffic, finalContext, bucketValue, m._datafileReader)
 
     if (matched.matchedTraffic <> Invalid)
       ' override from rule
@@ -552,7 +555,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
           return {
             bucketValue: bucketValue,
             featureKey: featureKey,
-            reason: m._featureVisorEvaluationReason.RULE,
+            reason: m._featurevisorEvaluationReason.RULE,
             ruleKey: matched.matchedTraffic.key,
             variation: variation,
           }
@@ -567,7 +570,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
           return {
             bucketValue: bucketValue,
             featureKey: featureKey,
-            reason: m._featureVisorEvaluationReason.ALLOCATED,
+            reason: m._featurevisorEvaluationReason.ALLOCATED,
             variation: variation,
           }
         end if
@@ -578,16 +581,16 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     return {
       bucketValue: bucketValue,
       featureKey: featureKey,
-      reason: m._featureVisorEvaluationReason.ERROR,
+      reason: m._featurevisorEvaluationReason.ERROR,
     }
 
   catch error
-    _printError("FeatureVisor - evaluateVariation - error", error)
+    _printError("Featurevisor - evaluateVariation - error", error)
 
     return {
       error: error,
       featureKey: featureKey,
-      reason: m._featureVisorEvaluationReason.ERROR,
+      reason: m._featurevisorEvaluationReason.ERROR,
     }
   end try
 end function
@@ -618,8 +621,8 @@ function getVariable(feature as Dynamic, variableKey as String, context = {} as 
 
     return Invalid
   catch error
-    print "FeatureVisor - getVariable - featureKey: ";featureKey
-    _printError("FeatureVisor - getVariable - error", error)
+    print "Featurevisor - getVariable - featureKey: ";featureKey
+    _printError("Featurevisor - getVariable - error", error)
 
     return Invalid
   end try
@@ -676,8 +679,8 @@ function getVariation(feature as Dynamic, context = {} as Object) as Dynamic
 
     return Invalid
   catch error
-    print "FeatureVisor - getVariation - featureKey: ";featureKey
-    _printError("FeatureVisor - getVariation - error", error)
+    print "Featurevisor - getVariation - featureKey: ";featureKey
+    _printError("Featurevisor - getVariation - error", error)
 
     return Invalid
   end try
@@ -691,8 +694,8 @@ function isEnabled(featureKey as String, context = {} as Object) as Boolean
 
     return false
   catch error
-    print "FeatureVisor - isEnabled - featureKey: ";featureKey
-    _printError("FeatureVisor - isEnabled - error", error)
+    print "Featurevisor - isEnabled - featureKey: ";featureKey
+    _printError("Featurevisor - isEnabled - error", error)
 
     return false
   end try
@@ -700,16 +703,16 @@ end function
 
 sub refresh()
   if (m._statuses.refreshInProgress)
-    print "FeatureVisor - refresh in progress, skipping"
+    print "Featurevisor - refresh in progress, skipping"
   end if
 
   if (m._datafileUrl = Invalid)
-    print "FeatureVisor - cannot refresh since `datafileUrl` is not provided"
+    print "Featurevisor - cannot refresh since `datafileUrl` is not provided"
   end if
 
   m._statuses.refreshInProgress = true
 
-  chain = createRequest("FeatureVisorRequest", { datafileUrl: m._datafileUrl })
+  chain = createRequest("FeaturevisorRequest", { datafileUrl: m._datafileUrl })
   chain.then(sub (datafile as Object, m as Object)
     m.top.refreshed = {}
 
@@ -719,7 +722,7 @@ sub refresh()
 
     setDatafile(datafile)
   end sub, sub (error as Object, _m as Object)
-    print "FeatureVisor - failed to refresh datafile: ";error
+    print "Featurevisor - failed to refresh datafile: ";error
   end sub, m)
   chain.finally(sub (_data as Object, m as Object)
     m._statuses.refreshInProgress = false
@@ -733,9 +736,9 @@ sub setDatafile(datafile as Dynamic)
       datafileScoped = ParseJson(datafileScoped)
     end if
 
-    m._datafileReader = FeatureVisorDatafileReader(datafileScoped)
+    m._datafileReader = FeaturevisorDatafileReader(datafileScoped)
   catch error
-    _printError("FeatureVisor - could not parse datafile", error)
+    _printError("Featurevisor - could not parse datafile", error)
   end try
 end sub
 
@@ -745,19 +748,19 @@ end sub
 
 sub startRefreshing()
   if (m._datafileUrl = Invalid)
-    print "FeatureVisor - cannot start refreshing since `datafileUrl` is not provided"
+    print "Featurevisor - cannot start refreshing since `datafileUrl` is not provided"
 
     return
   end if
 
   if (m._intervalId <> Invalid)
-    print "FeatureVisor - refreshing has already started"
+    print "Featurevisor - refreshing has already started"
 
     return
   end if
 
   if (m._refreshInterval = Invalid OR m._refreshInterval <= 0)
-    print "FeatureVisor - no `refreshInterval` option provided"
+    print "Featurevisor - no `refreshInterval` option provided"
 
     return
   end if
@@ -806,13 +809,13 @@ function _getValueByType(value as Dynamic, fieldType as String) as Dynamic
       return value
     end if
   catch _error
-    print "FeatureVisor - couldn't get value by it's type"
+    print "Featurevisor - couldn't get value by it's type"
   end try
 end function
 
 function _getBucketValue(feature as Object, finalContext as Object) as Integer
   bucketKey = _getBucketKey(feature, finalContext)
-  bucketValue = featureVisorGetBucketedNumber(bucketKey)
+  bucketValue = featurevisorGetBucketedNumber(bucketKey)
 
   return _configureBucketValue(feature, finalContext, bucketValue)
 end function
@@ -835,8 +838,8 @@ function _getBucketKey(feature as Object, context as Object) as String
     attributeKeys = feature.bucketBy["or"]
     bucketType = "or"
   else
-    print "FeatureVisor - invalid bucketBy - featureKey: ";featureKey
-    print "FeatureVisor - invalid bucketBy - bucketBy: ";feature.bucketBy
+    print "Featurevisor - invalid bucketBy - featureKey: ";featureKey
+    print "Featurevisor - invalid bucketBy - bucketBy: ";feature.bucketBy
 
     return ""
   end if

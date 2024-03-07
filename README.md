@@ -22,22 +22,22 @@ Visit [https://featurevisor.com/docs/sdks/](https://featurevisor.com/docs/sdks/)
   - [`refreshInterval`](#refreshinterval)
   - [`stickyFeatures`](#stickyfeatures)
 - [API](#api)
-  - [`featureVisorFacade.onActivation`](#featurevisorfacadeonactivation)
-  - [`featureVisorFacade.onReady`](#featurevisorfacadeonready)
-  - [`featureVisorFacade.onRefresh`](#featurevisorfacadeonrefresh)
-  - [`featureVisorFacade.onUpdate`](#featurevisorfacadeonupdate)
-  - [`featureVisorFacade.isEnabled`](#featurevisorfacadeisenabled)
-  - [`featureVisorFacade.getVariation`](#featurevisorfacadegetvariation)
-  - [`featureVisorFacade.getVariable`](#featurevisorfacadegetvariable)
-  - [`featureVisorFacade.activate`](#featurevisorfacadeactivate)
-  - [`featureVisorFacade.clear`](#featurevisorfacadeclear)
-  - [`featureVisorFacade.getRevision`](#featurevisorfacadegetrevision)
-  - [`featureVisorFacade.isReady`](#featurevisorfacadeisready)
-  - [`featureVisorFacade.refresh`](#featurevisorfacaderefresh)
-  - [`featureVisorFacade.setDatafile`](#featurevisorfacadesetdatafile)
-  - [`featureVisorFacade.setStickyFeatures`](#featurevisorfacadesetstickyfeatures)
-  - [`featureVisorFacade.startRefreshing`](#featurevisorfacadestartrefreshing)
-  - [`featureVisorFacade.stopRefreshing`](#featurevisorfacadestoprefreshing)
+  - [`featurevisorSDK.onActivation`](#featurevisorsdkonactivation)
+  - [`featurevisorSDK.onReady`](#featurevisorsdkonready)
+  - [`featurevisorSDK.onRefresh`](#featurevisorsdkonrefresh)
+  - [`featurevisorSDK.onUpdate`](#featurevisorsdkonupdate)
+  - [`featurevisorSDK.isEnabled`](#featurevisorsdkisenabled)
+  - [`featurevisorSDK.getVariation`](#featurevisorsdkgetvariation)
+  - [`featurevisorSDK.getVariable`](#featurevisorsdkgetvariable)
+  - [`featurevisorSDK.activate`](#featurevisorsdkactivate)
+  - [`featurevisorSDK.clear`](#featurevisorsdkclear)
+  - [`featurevisorSDK.getRevision`](#featurevisorsdkgetrevision)
+  - [`featurevisorSDK.isReady`](#featurevisorsdkisready)
+  - [`featurevisorSDK.refresh`](#featurevisorsdkrefresh)
+  - [`featurevisorSDK.setDatafile`](#featurevisorsdksetdatafile)
+  - [`featurevisorSDK.setStickyFeatures`](#featurevisorsdksetstickyfeatures)
+  - [`featurevisorSDK.startRefreshing`](#featurevisorsdkstartrefreshing)
+  - [`featurevisorSDK.stopRefreshing`](#featurevisorsdkstoprefreshing)
 
 ## Installation
 
@@ -47,17 +47,30 @@ npm i -P @featurevisor/roku
 
 ## Usage
 
-Initialize the SDK (creates `FeatureVisorAgent` node).
-For example, in the new `MyFeatureVisorNode` created:
+Initialize the SDK (creates `FeaturevisorInstance` node).
+For example, in the new `MyFeaturevisorNode` created:
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m._featureVisor = FeatureVisorFacade()
-  m._featureVisorAgent = m._featureVisor.initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     datafileUrl: "<featurevisor-datafile-url>",
   })
+end sub
+```
+
+You can also pass an existing instance to SDK, to not create a new instance, but to use an existing one to use FeaturevisorSDK methods that are invoked on it.
+
+```brightscript
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
+
+sub init()
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
+    ' options from an existing instance are kept but could be overridden
+  }, existingInstance)
 end sub
 ```
 
@@ -87,10 +100,11 @@ this object will be accessible via `m` in those functions.
 Use it to take over bucketing key generation process.
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     configureBucketKey: function (feature as Dynamic, context as Object, bucketKey as String) as String
       return bucketKey
     end function,
@@ -106,10 +120,11 @@ end sub
 Use it to take over bucketing process.
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     configureBucketValue: function (feature as Dynamic, context as Object, bucketValue as String) as Integer
       return bucketValue ' 0 to 100000
     end function,
@@ -139,10 +154,11 @@ Use it to pass the URL to fetch the datafile from.
 Pass set of initial features with their variation and (optional) variables that you want the SDK to return until the datafile is fetched and parsed:
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     initialFeatures: {
       myFeatureKey: {
         enabled: true,
@@ -166,7 +182,7 @@ end sub
 Intercept given context before they are used to bucket the user:
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
   defaultContext = {
@@ -175,7 +191,8 @@ sub init()
     country: "US",
     timezone: "America/New_York",
   }
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     configureAndInterceptStaticContext: defaultContext,
     interceptContext: function (context as Object) as Object
       joinedContext = {}
@@ -197,10 +214,11 @@ end sub
 Capture activated features along with their evaluated variation:
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     onActivation: {
       callback: sub (data as Object)
         ' feature has been activated
@@ -229,13 +247,14 @@ end sub
 Triggered maximum once when the SDK is ready to be used.
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     onReady: {
       callback: sub ()
-        ' agent has been initialized and it is ready
+        ' agent has been createInstanced and it is ready
       end sub,
       context: {}, ' optional context for the callback
     },
@@ -254,10 +273,11 @@ Triggered every time the datafile is refreshed.
 Works only when `datafileUrl` and `refreshInterval` are set.
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     onRefresh: {
       callback: sub ()
         ' datafile has been refreshed
@@ -279,10 +299,11 @@ Triggered every time the datafile is refreshed, and the newly fetched datafile i
 Works only when `datafileUrl` and `refreshInterval` are set.
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     onUpdate: {
       callback: sub ()
         ' datafile has been updated (the revision has changed)
@@ -301,10 +322,11 @@ end sub
 Set the interval grater than zero to refresh the datafile.
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     datafileUrl: "<featurevisor-datafile-url>",
     refreshInterval: 60 * 5, ' every 5 minutes
   })
@@ -321,10 +343,11 @@ If set, the SDK will skip evaluating the datafile and return variation and varia
 If a feature key is not present in this object, the SDK will continue to evaluate the datafile.
 
 ```brightscript
-' @import /components/libs/featureVisor/FeatureVisor.facade.brs from @featurevisor/roku
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  featureVisorAgent = FeatureVisorFacade().initialize({
+  m.featurevisorSDK = FeaturevisorSDK()
+  f = m.featurevisorSDK.createInstance({
     stickyFeatures: {
       myFeatureKey: {
         enabled: true,
@@ -344,91 +367,91 @@ end sub
 
 Other methods that could be called before initialization:
 
-### `featureVisorFacade.onActivation`
+### `featurevisorSDK.onActivation`
 
-> `featureVisorFacade.onActivation(func as Function, context = Invalid as Object)`
+> `featurevisorSDK.onActivation(func as Function, context = Invalid as Object)`
 
-### `featureVisorFacade.onReady`
+### `featurevisorSDK.onReady`
 
-> `featureVisorFacade.onReady(func as Function, context = Invalid as Object)`
+> `featurevisorSDK.onReady(func as Function, context = Invalid as Object)`
 
-### `featureVisorFacade.onRefresh`
+### `featurevisorSDK.onRefresh`
 
-> `featureVisorFacade.onRefresh(func as Function, context = Invalid as Object)`
+> `featurevisorSDK.onRefresh(func as Function, context = Invalid as Object)`
 
-### `featureVisorFacade.onUpdate`
+### `featurevisorSDK.onUpdate`
 
-> `featureVisorFacade.onUpdate(func as Function, context = Invalid as Object)`
+> `featurevisorSDK.onUpdate(func as Function, context = Invalid as Object)`
 
 These methods should be called once the SDK instance is created:
 
-### `featureVisorFacade.isEnabled`
+### `featurevisorSDK.isEnabled`
 
-> `featureVisorFacade.isEnabled(featureKey as String, context = {} as Object) as Boolean`
+> `featurevisorSDK.isEnabled(featureKey as String, context = {} as Object) as Boolean`
 
-### `featureVisorFacade.getVariation`
+### `featurevisorSDK.getVariation`
 
-> `featureVisorFacade.getVariation(feature as Dynamic, context = {} as Object) as Dynamic`
+> `featurevisorSDK.getVariation(feature as Dynamic, context = {} as Object) as Dynamic`
 
-### `featureVisorFacade.getVariable`
+### `featurevisorSDK.getVariable`
 
-> `featureVisorFacade.getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+> `featurevisorSDK.getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
 
 Also supports additional type specific methods:
 
-- `featureVisorFacade.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Boolean`
-- `featureVisorFacade.getVariableString(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `featureVisorFacade.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Integer`
-- `featureVisorFacade.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Float`
-- `featureVisorFacade.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
-- `featureVisorFacade.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
-- `featureVisorFacade.getVariableJSON(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `featurevisorSDK.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Boolean`
+- `featurevisorSDK.getVariableString(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `featurevisorSDK.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Integer`
+- `featurevisorSDK.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Float`
+- `featurevisorSDK.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+- `featurevisorSDK.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+- `featurevisorSDK.getVariableJSON(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
 
-### `featureVisorFacade.activate`
+### `featurevisorSDK.activate`
 
-> `featureVisorFacade.activate(feature as Dynamic, context = {} as Object) as Object`
+> `featurevisorSDK.activate(feature as Dynamic, context = {} as Object) as Object`
 
 Same as `getVariation`, but also calls the `onActivation` callback.
 
 This is a convenience method meant to be called when you know the User has been exposed to your Feature, and you also want to track the activation.
 
-### `featureVisorFacade.clear`
+### `featurevisorSDK.clear`
 
-> `featureVisorFacade.clear()`
+> `featurevisorSDK.clear()`
 
-### `featureVisorFacade.getRevision`
+### `featurevisorSDK.getRevision`
 
-> `featureVisorFacade.getRevision() as String`
+> `featurevisorSDK.getRevision() as String`
 
-### `featureVisorFacade.isReady`
+### `featurevisorSDK.isReady`
 
-> `featureVisorFacade.isReady() as Boolean`
+> `featurevisorSDK.isReady() as Boolean`
 
 Check if the instance is ready to be used.
 
-### `featureVisorFacade.refresh`
+### `featurevisorSDK.refresh`
 
-> `featureVisorFacade.refresh()`
+> `featurevisorSDK.refresh()`
 
 Manually refresh datafile.
 
-### `featureVisorFacade.setDatafile`
+### `featurevisorSDK.setDatafile`
 
-> `featureVisorFacade.setDatafile(datafile as Object)`
+> `featurevisorSDK.setDatafile(datafile as Object)`
 
-### `featureVisorFacade.setStickyFeatures`
+### `featurevisorSDK.setStickyFeatures`
 
-> `featureVisorFacade.setStickyFeatures(stickyFeatures as Object)`
+> `featurevisorSDK.setStickyFeatures(stickyFeatures as Object)`
 
-### `featureVisorFacade.startRefreshing`
+### `featurevisorSDK.startRefreshing`
 
-> `featureVisorFacade.startRefreshing()`
+> `featurevisorSDK.startRefreshing()`
 
 Start refreshing if refreshInterval was provided
 
-### `featureVisorFacade.stopRefreshing`
+### `featurevisorSDK.stopRefreshing`
 
-> `featureVisorFacade.stopRefreshing()`
+> `featurevisorSDK.stopRefreshing()`
 
 Cancel refreshing
 

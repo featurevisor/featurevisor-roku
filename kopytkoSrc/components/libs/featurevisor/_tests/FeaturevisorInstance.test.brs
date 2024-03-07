@@ -6,9 +6,9 @@
 ' @mock /components/http/request/createRequest.brs from @dazn/kopytko-framework
 ' @mock /components/rokuComponents/Timer.brs from @dazn/kopytko-utils
 
-function TestSuite__FeatureVisorAgent() as Object
+function TestSuite__FeaturevisorInstance() as Object
   ts = KopytkoTestSuite()
-  ts.name = "FeatureVisorAgent"
+  ts.name = "FeaturevisorInstance"
 
   beforeEach(sub (_ts as Object)
     mockFunction("createRequest").returnValue(Promise())
