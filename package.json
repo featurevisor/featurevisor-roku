@@ -20,11 +20,11 @@
   ],
   "author": "Błażej Chełkowski <bchelkow@gmail.com>",
   "files": [
-    "kopytkoSrc",
+    "src",
     "!**/_tests"
   ],
   "scripts": {
-    "lint": "eslint --ext .brs kopytkoSrc/",
+    "lint": "eslint --ext .brs src/",
     "test": "node node_modules/@dazn/kopytko-unit-testing-framework/scripts/test.js"
   },
   "dependencies": {

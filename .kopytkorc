@@ -1,6 +1,6 @@
 {
   "baseManifest": "./manifest.js",
-  "sourceDir": "./kopytkoSrc",
+  "sourceDir": "./src",
   "pluginDefinitions": {
     "generate-tests": "./node_modules/@dazn/kopytko-unit-testing-framework/plugins/generate-tests"
   },
