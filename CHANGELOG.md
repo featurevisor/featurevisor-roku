@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.3...v1.0.4) (2024-03-07)
+
+
+### Bug Fixes
+
+* rename kopytkoSrc to src ([a3f1151](https://github.com/featurevisor/featurevisor-roku/commit/a3f1151339887a0222c1f43acefc8f5caf83a184))
+
 ## [1.0.3](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.2...v1.0.3) (2024-03-07)
 
 
