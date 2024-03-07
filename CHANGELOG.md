@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.1...v1.0.2) (2024-03-07)
+
+
+### Bug Fixes
+
+* rename files and functions ([a66bbc3](https://github.com/featurevisor/featurevisor-roku/commit/a66bbc356a8c88538e7e2c5ad64575c1d5e83a3c))
+
 ## [1.0.1](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.0...v1.0.1) (2024-03-07)
 
 
