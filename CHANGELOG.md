@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.2...v1.0.3) (2024-03-07)
+
+
+### Bug Fixes
+
+* delete featureVisor directory ([9175118](https://github.com/featurevisor/featurevisor-roku/commit/9175118ef95bee0fa3862d96d3ee54f03fce0873))
+
 ## [1.0.2](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.1...v1.0.2) (2024-03-07)
 
 
