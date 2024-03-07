@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.0...v1.0.1) (2024-03-07)
+
+
+### Bug Fixes
+
+* add publish config ([de23bb6](https://github.com/featurevisor/featurevisor-roku/commit/de23bb6cbf267f729fb07bb0e4b5a82183002639))
+
 # 1.0.0 (2024-03-07)
 
 
