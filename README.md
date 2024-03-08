@@ -1,8 +1,53 @@
+[![Featurevisor](./assets/banner-bordered.png)](https://featurevisor.com)
+
+<div align="center">
+  <h3><strong>Feature management for developers</strong></h3>
+</div>
+
+<div align="center">
+  <small>Manage your feature flags and experiments declaratively from the comfort of your Git workflow.</small>
+</div>
+
+<br />
+
+<div align="center">
+  <!-- License -->
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/npm/l/@featurevisor/sdk.svg?style=flat-square"
+      alt="License" />
+  </a>
+</div>
+
+<div align="center">
+  <h3>
+    <a href="https://featurevisor.com">
+      Website
+    </a>
+    <span> | </span>
+    <a href="https://featurevisor.com/docs/sdks/roku">
+      Documentation
+    </a>
+    <span> | </span>
+    <a href="https://github.com/featurevisor/featurevisor-roku/issues">
+      Issues
+    </a>
+    <span> | </span>
+    <a href="https://featurevisor.com/docs/contributing">
+      Contributing
+    </a>
+    <span> | </span>
+  </h3>
+</div>
+
+---
+
 # @featurevisor/roku <!-- omit in toc -->
 
-BrightScript SDK for Roku.
+BrightScript SDK for Roku is meant to be used with [kopytko-framework](https://github.com/getndazn/kopytko-framework).
 
-Visit [https://featurevisor.com/docs/sdks/](https://featurevisor.com/docs/sdks/) for more information.
+However, if you don't use it, you can simply copy all SDK files and their dependencies to your project (a version will be prepared in the future if anyone is interested).
+
+Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sdks/roku) for more information.
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -22,22 +67,22 @@ Visit [https://featurevisor.com/docs/sdks/](https://featurevisor.com/docs/sdks/)
   - [`refreshInterval`](#refreshinterval)
   - [`stickyFeatures`](#stickyfeatures)
 - [API](#api)
-  - [`featurevisorSDK.onActivation`](#featurevisorsdkonactivation)
-  - [`featurevisorSDK.onReady`](#featurevisorsdkonready)
-  - [`featurevisorSDK.onRefresh`](#featurevisorsdkonrefresh)
-  - [`featurevisorSDK.onUpdate`](#featurevisorsdkonupdate)
-  - [`featurevisorSDK.isEnabled`](#featurevisorsdkisenabled)
-  - [`featurevisorSDK.getVariation`](#featurevisorsdkgetvariation)
-  - [`featurevisorSDK.getVariable`](#featurevisorsdkgetvariable)
-  - [`featurevisorSDK.activate`](#featurevisorsdkactivate)
-  - [`featurevisorSDK.clear`](#featurevisorsdkclear)
-  - [`featurevisorSDK.getRevision`](#featurevisorsdkgetrevision)
-  - [`featurevisorSDK.isReady`](#featurevisorsdkisready)
-  - [`featurevisorSDK.refresh`](#featurevisorsdkrefresh)
-  - [`featurevisorSDK.setDatafile`](#featurevisorsdksetdatafile)
-  - [`featurevisorSDK.setStickyFeatures`](#featurevisorsdksetstickyfeatures)
-  - [`featurevisorSDK.startRefreshing`](#featurevisorsdkstartrefreshing)
-  - [`featurevisorSDK.stopRefreshing`](#featurevisorsdkstoprefreshing)
+  - [`f.isEnabled`](#fisenabled)
+  - [`f.getVariation`](#fgetvariation)
+  - [`f.getVariable`](#fgetvariable)
+  - [`f.activate`](#factivate)
+  - [`f.onActivation`](#fonactivation)
+  - [`f.onReady`](#fonready)
+  - [`f.onRefresh`](#fonrefresh)
+  - [`f.onUpdate`](#fonupdate)
+  - [`f.clear`](#fclear)
+  - [`f.getRevision`](#fgetrevision)
+  - [`f.isReady`](#fisready)
+  - [`f.refresh`](#frefresh)
+  - [`f.setDatafile`](#fsetdatafile)
+  - [`f.setStickyFeatures`](#fsetstickyfeatures)
+  - [`f.startRefreshing`](#fstartrefreshing)
+  - [`f.stopRefreshing`](#fstoprefreshing)
 
 ## Installation
 
@@ -54,8 +99,8 @@ For example, in the new `MyFeaturevisorNode` created:
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     datafileUrl: "<featurevisor-datafile-url>",
   })
 end sub
@@ -67,8 +112,8 @@ You can also pass an existing instance to SDK, to not create a new instance, but
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     ' options from an existing instance are kept but could be overridden
   }, existingInstance)
 end sub
@@ -103,8 +148,8 @@ Use it to take over bucketing key generation process.
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     configureBucketKey: function (feature as Dynamic, context as Object, bucketKey as String) as String
       return bucketKey
     end function,
@@ -123,8 +168,8 @@ Use it to take over bucketing process.
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     configureBucketValue: function (feature as Dynamic, context as Object, bucketValue as String) as Integer
       return bucketValue ' 0 to 100000
     end function,
@@ -157,8 +202,8 @@ Pass set of initial features with their variation and (optional) variables that 
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     initialFeatures: {
       myFeatureKey: {
         enabled: true,
@@ -191,8 +236,8 @@ sub init()
     country: "US",
     timezone: "America/New_York",
   }
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     configureAndInterceptStaticContext: defaultContext,
     interceptContext: function (context as Object) as Object
       joinedContext = {}
@@ -217,8 +262,8 @@ Capture activated features along with their evaluated variation:
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     onActivation: {
       callback: sub (data as Object)
         ' feature has been activated
@@ -250,8 +295,8 @@ Triggered maximum once when the SDK is ready to be used.
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     onReady: {
       callback: sub ()
         ' agent has been createInstanced and it is ready
@@ -276,8 +321,8 @@ Works only when `datafileUrl` and `refreshInterval` are set.
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     onRefresh: {
       callback: sub ()
         ' datafile has been refreshed
@@ -302,8 +347,8 @@ Works only when `datafileUrl` and `refreshInterval` are set.
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     onUpdate: {
       callback: sub ()
         ' datafile has been updated (the revision has changed)
@@ -325,8 +370,8 @@ Set the interval grater than zero to refresh the datafile.
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     datafileUrl: "<featurevisor-datafile-url>",
     refreshInterval: 60 * 5, ' every 5 minutes
   })
@@ -346,8 +391,8 @@ If a feature key is not present in this object, the SDK will continue to evaluat
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
-  m.featurevisorSDK = FeaturevisorSDK()
-  f = m.featurevisorSDK.createInstance({
+  f = FeaturevisorSDK()
+  f.createInstance({
     stickyFeatures: {
       myFeatureKey: {
         enabled: true,
@@ -365,95 +410,115 @@ end sub
 
 ## API
 
-Other methods that could be called before initialization:
+### `f.isEnabled`
 
-### `featurevisorSDK.onActivation`
+Check if a feature is enabled or not.
 
-> `featurevisorSDK.onActivation(func as Function, context = Invalid as Object)`
+> `f.isEnabled(featureKey as String, context = {} as Object) as Boolean`
 
-### `featurevisorSDK.onReady`
+### `f.getVariation`
 
-> `featurevisorSDK.onReady(func as Function, context = Invalid as Object)`
+Get feature variation.
 
-### `featurevisorSDK.onRefresh`
+> `f.getVariation(feature as Dynamic, context = {} as Object) as Dynamic`
 
-> `featurevisorSDK.onRefresh(func as Function, context = Invalid as Object)`
+### `f.getVariable`
 
-### `featurevisorSDK.onUpdate`
+Get feature variable.
 
-> `featurevisorSDK.onUpdate(func as Function, context = Invalid as Object)`
-
-These methods should be called once the SDK instance is created:
-
-### `featurevisorSDK.isEnabled`
-
-> `featurevisorSDK.isEnabled(featureKey as String, context = {} as Object) as Boolean`
-
-### `featurevisorSDK.getVariation`
-
-> `featurevisorSDK.getVariation(feature as Dynamic, context = {} as Object) as Dynamic`
-
-### `featurevisorSDK.getVariable`
-
-> `featurevisorSDK.getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+> `f.getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
 
 Also supports additional type specific methods:
 
-- `featurevisorSDK.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Boolean`
-- `featurevisorSDK.getVariableString(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `featurevisorSDK.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Integer`
-- `featurevisorSDK.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Float`
-- `featurevisorSDK.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
-- `featurevisorSDK.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
-- `featurevisorSDK.getVariableJSON(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `f.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Boolean`
+- `f.getVariableString(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `f.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Integer`
+- `f.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Float`
+- `f.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+- `f.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+- `f.getVariableJSON(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
 
-### `featurevisorSDK.activate`
-
-> `featurevisorSDK.activate(feature as Dynamic, context = {} as Object) as Object`
+### `f.activate`
 
 Same as `getVariation`, but also calls the `onActivation` callback.
 
 This is a convenience method meant to be called when you know the User has been exposed to your Feature, and you also want to track the activation.
 
-### `featurevisorSDK.clear`
+> `f.activate(feature as Dynamic, context = {} as Object) as Object`
 
-> `featurevisorSDK.clear()`
+### `f.onActivation`
 
-### `featurevisorSDK.getRevision`
+Adds on activation callback which will be called after an feature activation.
 
-> `featurevisorSDK.getRevision() as String`
+> `f.onActivation(func as Function, context = Invalid as Object)`
 
-### `featurevisorSDK.isReady`
+### `f.onReady`
 
-> `featurevisorSDK.isReady() as Boolean`
+Adds on ready callback which will be called after an instance is ready (datafile is saved).
 
-Check if the instance is ready to be used.
+**It should be called before `createInstance`**
 
-### `featurevisorSDK.refresh`
+> `f.onReady(func as Function, context = Invalid as Object)`
 
-> `featurevisorSDK.refresh()`
+### `f.onRefresh`
+
+Adds on refresh callback which will be called after a successful datafile refresh. But the file doesn't need to change.
+
+> `f.onRefresh(func as Function, context = Invalid as Object)`
+
+### `f.onUpdate`
+
+Adds on update callback which will be called after a successful datafile refresh when it has been changed compared to the previous one.
+
+> `f.onUpdate(func as Function, context = Invalid as Object)`
+
+### `f.clear`
+
+Stop refreshing and clear the whole instance. It needs to be initialized once again.
+
+> `f.clear()`
+
+### `f.getRevision`
+
+Get the datafile revision.
+
+> `f.getRevision() as String`
+
+### `f.isReady`
+
+Check if the instance is ready to be used (the datafile is set).
+
+> `f.isReady() as Boolean`
+
+### `f.refresh`
 
 Manually refresh datafile.
 
-### `featurevisorSDK.setDatafile`
+> `f.refresh()`
 
-> `featurevisorSDK.setDatafile(datafile as Object)`
+### `f.setDatafile`
 
-### `featurevisorSDK.setStickyFeatures`
+Set datafile manually.
 
-> `featurevisorSDK.setStickyFeatures(stickyFeatures as Object)`
+> `f.setDatafile(datafile as Object)`
 
-### `featurevisorSDK.startRefreshing`
+### `f.setStickyFeatures`
 
-> `featurevisorSDK.startRefreshing()`
+Set sticky features.
 
-Start refreshing if refreshInterval was provided
+> `f.setStickyFeatures(stickyFeatures as Object)`
 
-### `featurevisorSDK.stopRefreshing`
+### `f.startRefreshing`
 
-> `featurevisorSDK.stopRefreshing()`
+Resume or start refreshing if refreshInterval was provided.
 
-Cancel refreshing
+> `f.startRefreshing()`
+
+### `f.stopRefreshing`
+
+Stop refreshing.
+
+> `f.stopRefreshing()`
 
 ## License <!-- omit in toc -->
 
