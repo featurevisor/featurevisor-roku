@@ -11,6 +11,11 @@
 <br />
 
 <div align="center">
+  <!-- NPM version -->
+  <a href="https://npmjs.org/package/@featurevisor/cli">
+    <img src="https://img.shields.io/npm/v/@featurevisor/roku.svg"
+      alt="NPM version" />
+  </a>
   <!-- License -->
   <a href="./LICENSE">
     <img src="https://img.shields.io/npm/l/@featurevisor/sdk.svg?style=flat-square"
@@ -36,6 +41,9 @@
       Contributing
     </a>
     <span> | </span>
+    <a href="https://github.com/featurevisor/featurevisor-roku/blob/main/CHANGELOG.md">
+      Changelog
+    </a>
   </h3>
 </div>
 
