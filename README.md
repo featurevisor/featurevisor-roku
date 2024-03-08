@@ -12,7 +12,7 @@
 
 <div align="center">
   <!-- NPM version -->
-  <a href="https://npmjs.org/package/@featurevisor/cli">
+  <a href="https://npmjs.org/package/@featurevisor/roku">
     <img src="https://img.shields.io/npm/v/@featurevisor/roku.svg"
       alt="NPM version" />
   </a>
