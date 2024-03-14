@@ -434,16 +434,16 @@ Get feature variation.
 
 Get feature variable.
 
-> `f.getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+> `f.getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
 
-Also supports additional type specific methods:
+Also supports additional type specific methods, returns the value of the desired type, or Invalid if the value does not exist or it does not have a desired type:
 
-- `f.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Boolean`
+- `f.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
 - `f.getVariableString(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `f.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Integer`
-- `f.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Float`
-- `f.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
-- `f.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+- `f.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `f.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `f.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `f.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
 - `f.getVariableJSON(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
 
 ### `f.activate`

@@ -105,32 +105,32 @@ function FeaturevisorSDK() as Object
     return m._featurevisorInstance.callFunc("getRevision")
   end function
 
-  prototype.getVariable = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
+  prototype.getVariable = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("getVariable", feature, variableKey, context)
   end function
 
-  prototype.getVariableArray = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
+  prototype.getVariableArray = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("getVariableArray", feature, variableKey, context)
   end function
 
-  prototype.getVariableBoolean = function (feature as Dynamic, variableKey as String, context = {} as Object) as Boolean
-    if (m._featurevisorInstance = Invalid) then return false
+  prototype.getVariableBoolean = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("getVariableBoolean", feature, variableKey, context)
   end function
 
-  prototype.getVariableDouble = function (feature as Dynamic, variableKey as String, context = {} as Object) as Float
-    if (m._featurevisorInstance = Invalid) then return 0
+  prototype.getVariableDouble = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("getVariableDouble", feature, variableKey, context)
   end function
 
-  prototype.getVariableInteger = function (feature as Dynamic, variableKey as String, context = {} as Object) as Integer
-    if (m._featurevisorInstance = Invalid) then return 0
+  prototype.getVariableInteger = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+    if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("getVariableInteger", feature, variableKey, context)
   end function
@@ -141,7 +141,7 @@ function FeaturevisorSDK() as Object
     return m._featurevisorInstance.callFunc("getVariableJSON", feature, variableKey, context)
   end function
 
-  prototype.getVariableObject = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
+  prototype.getVariableObject = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("getVariableObject", feature, variableKey, context)
