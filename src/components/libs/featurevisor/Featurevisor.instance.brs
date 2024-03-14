@@ -607,7 +607,7 @@ function getRevision() as String
   return m._datafileReader.getRevision()
 end function
 
-function getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Object
+function getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
   try
     evaluation = evaluateVariable(feature, variableKey, context)
 
@@ -628,25 +628,25 @@ function getVariable(feature as Dynamic, variableKey as String, context = {} as 
   end try
 end function
 
-function getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Object
+function getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
   variableValue = getVariable(feature, variableKey, context)
 
   return _getValueByType(variableValue, "array")
 end function
 
-function getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Boolean
+function getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
   variableValue = getVariable(feature, variableKey, context)
 
   return _getValueByType(variableValue, "boolean")
 end function
 
-function getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Float
+function getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
   variableValue = getVariable(feature, variableKey, context)
 
   return _getValueByType(variableValue, "double")
 end function
 
-function getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Integer
+function getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
   variableValue = getVariable(feature, variableKey, context)
 
   return _getValueByType(variableValue, "integer")
@@ -658,7 +658,7 @@ function getVariableJSON(feature as Dynamic, variableKey as String, context = {}
   return _getValueByType(variableValue, "json")
 end function
 
-function getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Object
+function getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
   variableValue = getVariable(feature, variableKey, context)
 
   return _getValueByType(variableValue, "object")
@@ -786,17 +786,18 @@ function _getValueByType(value as Dynamic, fieldType as String) as Dynamic
       if (getType(value) = "roInt" OR getType(value) = "LongInteger") then return value
       if (getType(value) = "roString") then return value.toInt()
 
-      return 0
+      return Invalid
     else if (fieldType = "double")
       if (getType(value) = "roFloat" OR getType(value) = "Double") then return value
       if (getType(value) = "roString") then return value.toFloat()
 
-      return 0
+      return Invalid
     else if (fieldType = "boolean")
       if (getType(value) = "roBoolean") then return value
-      if (getType(value) = "roString" AND value = "true") then return true
+      if (getType(value) = "roString" AND LCase(value) = "true") then return true
+      if (getType(value) = "roString" AND LCase(value) = "false") then return false
 
-      return false
+      return Invalid
     else if (fieldType = "array")
       if (getType(value) = "roArray") then return value
 
