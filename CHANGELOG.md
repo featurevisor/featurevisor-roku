@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.4...v1.0.5) (2024-03-14)
+
+
+### Bug Fixes
+
+* variable methods need to return Invalid if variable does not exist ([#1](https://github.com/featurevisor/featurevisor-roku/issues/1)) ([352669b](https://github.com/featurevisor/featurevisor-roku/commit/352669bd0b4fa60c0fc6e99c9ed81be3ae16a971))
+
 ## [1.0.4](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.3...v1.0.4) (2024-03-07)
 
 
