@@ -18,7 +18,13 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
       return conditions.count() = filtered.count()
     end if
 
-    if (conditions.doesExist("attribute")) then return m._conditionIsMatched(conditions, context)
+    if (conditions.doesExist("attribute"))
+      try
+        return m._conditionIsMatched(conditions, context)
+      catch _error
+        return false
+      end try
+    end if
 
     if (conditions.doesExist("and") AND getType(conditions["and"]) = "roArray")
       filtered = m._arrayUtils.filter(conditions["and"], function (item as Object, context as Object) as Boolean

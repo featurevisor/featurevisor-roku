@@ -1115,6 +1115,52 @@ function TestSuite__FeaturevisorInstance() as Object
     ]
   end function)
 
+  it("should not fail because of improperly formatted sem version", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1.0",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            { key: "0", segments: ["desktop", "version_gt5"], percentage: 100000 },
+            { key: "1", segments: "mobile", percentage: 100000 },
+            { key: "2", segments: "*", percentage: 0 },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [
+        {
+          key: "desktop",
+          conditions: FormatJson([{ attribute: "deviceType", operator: "equals", value: "desktop" }]),
+        },
+        {
+          key: "mobile",
+          conditions: FormatJson([{ attribute: "deviceType", operator: "equals", value: "mobile" }]),
+        },
+        {
+          key: "version_gt5",
+          conditions: FormatJson([{ attribute: "version", operator: "semverGreaterThan", value: "5.0" }]),
+        },
+      ],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return [
+      expect(isEnabled("test", { deviceType: "desktop", version: "1.2.3" })).toBeFalse(),
+      expect(isEnabled("test", { deviceType: "desktop", version: "5.5.0" })).toBeTrue(),
+      expect(isEnabled("test", { deviceType: "mobile", version: "1.2.3" })).toBeTrue(),
+      expect(isEnabled("test", { deviceType: "mobile", version: "7.0.A101.99gbm.lg" })).toBeTrue(),
+      expect(isEnabled("test", { deviceType: "tablet", version: "5.5.A101.99gbm.lg" })).toBeFalse(),
+    ]
+  end function)
+
   return ts
 end function
 

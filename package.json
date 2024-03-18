@@ -30,7 +30,7 @@
   "dependencies": {
     "@dazn/kopytko-framework": "^3.0.0",
     "@dazn/kopytko-utils": "^2.6.0",
-    "compare-versions-roku": "^1.0.0",
+    "compare-versions-roku": "^1.0.1",
     "murmurhash-roku": "^1.0.0"
   },
   "devDependencies": {

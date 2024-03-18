@@ -74,6 +74,7 @@ function TestSuite__FeaturevisorSegments() as Object
       { key: "germanMobileUsers", segments: [{ "and": ["mobileUsers", "germany"] }] },
       { key: "germanNonMobileUsers", segments: [{ "and": ["germany", { "not": ["mobileUsers"] }] }] },
       { key: "notVersion5.5", segments: [{ "not": ["version_5.5"] }] },
+      { key: "improperSemver", segments: [{ "and": ["mobileUsers", { "not": ["version_5.5"] }] }] },
     ]
   end sub)
 
@@ -289,6 +290,27 @@ function TestSuite__FeaturevisorSegments() as Object
       expect(featurevisorAllGroupSegmentsAreMatched(group.segments, { version: 5.7 }, m.__datafileReader)).toBeTrue(),
       expect(featurevisorAllGroupSegmentsAreMatched(group.segments, { version: "5.5" }, m.__datafileReader)).toBeFalse(),
       expect(featurevisorAllGroupSegmentsAreMatched(group.segments, { version: 5.5 }, m.__datafileReader)).toBeFalse(),
+    ]
+  end function)
+
+  it("should omit segment with improperly formatted sem version", function (_ts as Object) as Object
+    ' Given
+    group = m.__arrayUtils.find(m.__groups, { key: "improperSemver" })
+
+    ' Then
+    return [
+      expect(featurevisorAllGroupSegmentsAreMatched(group.segments, {
+        deviceType: "mobile",
+        version: "asd",
+      }, m.__datafileReader)).toBeTrue(),
+      expect(featurevisorAllGroupSegmentsAreMatched(group.segments, {
+        deviceType: "mobile",
+        version: "5.5.A101.99gbm.lg",
+      }, m.__datafileReader)).toBeTrue(),
+      expect(featurevisorAllGroupSegmentsAreMatched(group.segments, {
+        deviceType: "unknown",
+        version: "5.5.A101.99gbm.lg",
+      }, m.__datafileReader)).toBeFalse(),
     ]
   end function)
 
