@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.5...v1.0.6) (2024-03-18)
+
+
+### Bug Fixes
+
+* move to next condition if parsing fails ([#2](https://github.com/featurevisor/featurevisor-roku/issues/2)) ([3a0a360](https://github.com/featurevisor/featurevisor-roku/commit/3a0a360d10d286396d102fb72b34c6519d5e5e7e))
+
 ## [1.0.5](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.4...v1.0.5) (2024-03-14)
 
 
