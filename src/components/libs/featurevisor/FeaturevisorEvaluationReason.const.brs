@@ -6,6 +6,7 @@ function FeaturevisorEvaluationReason() as Object
     ERROR: "error",
     FORCED: "forced",
     INITIAL: "initial",
+    NO_MATCH: "no_match",
     NO_VARIATIONS: "no_variations",
     NOT_FOUND: "not_found",
     OUT_OF_RANGE: "out_of_range",

@@ -279,7 +279,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
       bucketValue: bucketValue,
       enabled: false,
       featureKey: featureKey,
-      reason: m._featurevisorEvaluationReason.ERROR,
+      reason: m._featurevisorEvaluationReason.NO_MATCH,
     }
   catch error
     _printError("Featurevisor - evaluateFlag - error", error)
@@ -581,7 +581,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     return {
       bucketValue: bucketValue,
       featureKey: featureKey,
-      reason: m._featurevisorEvaluationReason.ERROR,
+      reason: m._featurevisorEvaluationReason.NO_MATCH,
     }
 
   catch error
