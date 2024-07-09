@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.6...v1.1.0) (2024-07-09)
+
+
+### Features
+
+* add no_match reason ([#3](https://github.com/featurevisor/featurevisor-roku/issues/3)) ([0517c9b](https://github.com/featurevisor/featurevisor-roku/commit/0517c9bc92267b1d7fa1f981246ee2ddd7026fa7))
+
 ## [1.0.6](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.5...v1.0.6) (2024-03-18)
 
 
