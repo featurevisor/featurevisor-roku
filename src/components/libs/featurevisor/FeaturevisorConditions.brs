@@ -74,14 +74,14 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
         end if
   
         return dateInContext.asSeconds() > dateInCondition.asSeconds()
-      else if (getType(context[condition.attribute]) = "roString" AND getType(condition.value) = "roArray")
+      else if (getType(condition.value) = "roArray" AND context.doesExist(condition.attribute) AND (context[condition.attribute] = Invalid OR getType(context[condition.attribute]) = "roString" OR m._isNumber(context[condition.attribute])))
         if (condition["operator"] = "in")
           return m._arrayUtils.contains(condition.value, function (item as String, context as Object) as Boolean
-            return item = context.compareValue
+            return context.compareValue <> Invalid AND item.toStr() = context.compareValue.toStr()
           end function, { compareValue: context[condition.attribute] })
         else if (condition["operator"] = "notIn")
           return NOT m._arrayUtils.contains(condition.value, function (item as String, context as Object) as Boolean
-            return item = context.compareValue
+            return context.compareValue <> Invalid AND item.toStr() = context.compareValue.toStr()
           end function, { compareValue: context[condition.attribute] })
         end if
       else if (getType(context[condition.attribute]) = "roString" AND getType(condition.value) = "roString")
