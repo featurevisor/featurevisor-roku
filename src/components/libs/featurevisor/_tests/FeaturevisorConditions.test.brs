@@ -151,6 +151,56 @@ function TestSuite__FeaturevisorConditions() as Object
 
   testEach([
     {
+      context: { continent: "europe" },
+      expected: false,
+      name: "should fail for one correct attribute and one missing attribute in context",
+    },
+    {
+      context: { continent: "asia" },
+      expected: false,
+      name: "should fail for one incorrect attribute and one missing attribute in context",
+    },
+    {
+      context: { continent: "europe", country: "nl" },
+      expected: true,
+      name: "should pass for both correct attributes in context",
+    },
+    {
+      context: { continent: "europe", country: "gb" },
+      expected: false,
+      name: "should fail for one incorrect attribute and one correct attribute in context",
+    },
+    {
+      context: { continent: "europe", country: ["a", "b"] },
+      expected: false,
+      name: "should fail for one incorrect attribute and one correct attribute in context",
+    },
+    {
+      context: { continent: "europe", country: 100 },
+      expected: true,
+      name: "should pass for one incorrect attribute (when it is a number) and one correct attribute in context",
+    },
+    {
+      context: { continent: "europe", country: Invalid },
+      expected: true,
+      name: "should pass for one incorrect attribute (when it is an invalid) and one correct attribute in context",
+    },
+  ], "combined condition equals and notIn - ${name}", function (_ts as Object, params as Object)
+    ' Given
+    conditions = [
+      { attribute: "continent", operator: "equals", value: "europe" },
+      { attribute: "country", operator: "notIn", value: ["gb"] },
+    ]
+
+    ' When
+    result = featurevisorAllConditionsAreMatched(conditions, params.context)
+
+    ' Then
+    return expect(result).toBe(params.expected)
+  end function)
+
+  testEach([
+    {
       conditions: { attribute: "browser_type", operator: "equals", value: "chrome" },
       context: { browser_type: "chrome" },
       name: "should match with exact single condition",
