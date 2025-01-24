@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.0...v1.1.1) (2025-01-24)
+
+
+### Bug Fixes
+
+* non-existent property in context when checking in and noIn conditions ([#4](https://github.com/featurevisor/featurevisor-roku/issues/4)) ([a504b3d](https://github.com/featurevisor/featurevisor-roku/commit/a504b3dbb73ce6376a5aaac712c1e90659238716))
+
 # [1.1.0](https://github.com/featurevisor/featurevisor-roku/compare/v1.0.6...v1.1.0) (2024-07-09)
 
 
