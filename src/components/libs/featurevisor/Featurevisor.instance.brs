@@ -713,18 +713,24 @@ sub refresh()
   m._statuses.refreshInProgress = true
 
   chain = createRequest("FeaturevisorRequest", { datafileUrl: m._datafileUrl })
-  chain.then(sub (datafile as Object, m as Object)
+  chain.then(function(datafile as object, m as object)
+    oldRevisionNumber = getRevision()
+    setDatafile(datafile)
+
+    return {
+      oldRevisionNumber: oldRevisionNumber,
+      datafile: datafile,
+    }
+  end function, sub (error as object, _m as object)
+    print "Featurevisor - failed to refresh datafile: ";error
+  end sub, m).then(sub (data as object)
     m.top.refreshed = {}
 
-    if (getRevision() <> datafile.revision)
+    if (data.oldRevisionNumber <> data.datafile.revision)
       m.top.updated = {}
     end if
-
-    setDatafile(datafile)
-  end sub, sub (error as Object, _m as Object)
-    print "Featurevisor - failed to refresh datafile: ";error
-  end sub, m)
-  chain.finally(sub (_data as Object, m as Object)
+  end sub)
+  chain.finally(sub (_data as object, m as object)
     m._statuses.refreshInProgress = false
   end sub, m)
 end sub
