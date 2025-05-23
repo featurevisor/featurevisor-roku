@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.1...v1.1.2) (2025-05-23)
+
+
+### Bug Fixes
+
+* calling onUpdate callback when datafile changed ([#5](https://github.com/featurevisor/featurevisor-roku/issues/5)) ([199d3d8](https://github.com/featurevisor/featurevisor-roku/commit/199d3d87e953ca3fd71f01bfcfc711843d451037))
+
 ## [1.1.1](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.0...v1.1.1) (2025-01-24)
 
 
