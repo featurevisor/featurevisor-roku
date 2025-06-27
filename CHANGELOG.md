@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.2...v1.1.3) (2025-06-27)
+
+
+### Bug Fixes
+
+* crash on refresh failure ([#6](https://github.com/featurevisor/featurevisor-roku/issues/6)) ([8728efd](https://github.com/featurevisor/featurevisor-roku/commit/8728efd746860e9c561d00dd76e101443d13498f))
+
 ## [1.1.2](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.1...v1.1.2) (2025-05-23)
 
 
