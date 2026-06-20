@@ -79,7 +79,7 @@ sub initialize(options = {} as Object)
     m._statuses.ready = true
     m.top.ready = {}
   else
-    print "Featurevisor instance cannot be initialized without `datafile` or `datafileUrl` option";error
+    print "Featurevisor instance cannot be initialized without `datafile` or `datafileUrl` option"
   end if
 end sub
 
@@ -128,7 +128,7 @@ function activate(feature as Dynamic, context = {} as Object) as Object
 
     return variationValue
   catch error
-    print "Featurevisor - activate - featureKey: ";featureKey
+    print "Featurevisor - activate - featureKey: ";feature
     _printError("Featurevisor - activate - error", error)
 
     return Invalid
@@ -491,6 +491,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     ' sticky
     if (getProperty(m._stickyFeatures, [featureKey, "variation"]) <> Invalid)
       variationValue = m._stickyFeatures[featureKey].variation
+
       return {
         featureKey: featureKey,
         reason: m._featurevisorEvaluationReason.STICKY,
@@ -583,7 +584,6 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
       featureKey: featureKey,
       reason: m._featurevisorEvaluationReason.NO_MATCH,
     }
-
   catch error
     _printError("Featurevisor - evaluateVariation - error", error)
 
@@ -621,7 +621,7 @@ function getVariable(feature as Dynamic, variableKey as String, context = {} as 
 
     return Invalid
   catch error
-    print "Featurevisor - getVariable - featureKey: ";featureKey
+    print "Featurevisor - getVariable - featureKey: ";feature
     _printError("Featurevisor - getVariable - error", error)
 
     return Invalid
@@ -679,7 +679,7 @@ function getVariation(feature as Dynamic, context = {} as Object) as Dynamic
 
     return Invalid
   catch error
-    print "Featurevisor - getVariation - featureKey: ";featureKey
+    print "Featurevisor - getVariation - featureKey: ";feature
     _printError("Featurevisor - getVariation - error", error)
 
     return Invalid
@@ -901,4 +901,3 @@ sub _printError(message as String, error as Object)
     print message;" - error.backtrace: ";backtrace
   end for
 end sub
-

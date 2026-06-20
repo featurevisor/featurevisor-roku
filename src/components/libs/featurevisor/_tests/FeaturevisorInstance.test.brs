@@ -1,7 +1,6 @@
 ' @import /components/_testUtils/fakeClock.brs from @dazn/kopytko-unit-testing-framework
 ' @import /components/KopytkoTestSuite.brs from @dazn/kopytko-unit-testing-framework
 ' @import /components/promise/Promise.brs from @dazn/kopytko-utils
-' @import /components/promise/PromiseReject.brs from @dazn/kopytko-utils
 ' @import /components/promise/PromiseResolve.brs from @dazn/kopytko-utils
 ' @mock /components/http/request/createRequest.brs from @dazn/kopytko-framework
 ' @mock /components/rokuComponents/Timer.brs from @dazn/kopytko-utils
@@ -203,6 +202,7 @@ function TestSuite__FeaturevisorInstance() as Object
       m.__refreshed = true
       m.__refreshedCount += 1
     end sub
+
     m.__onUpdate = sub ()
       m.__updated = true
       m.__updatedCount += 1
@@ -636,8 +636,8 @@ function TestSuite__FeaturevisorInstance() as Object
     initialize({ datafile: datafile })
 
     return [
-      expect(isEnabled("test", { userId: "user-123", country: "de" })).toBeTrue()
-      expect(isEnabled("test", { userId: "user-123", country: "nl" })).toBeFalse()
+      expect(isEnabled("test", { userId: "user-123", country: "de" })).toBeTrue(),
+      expect(isEnabled("test", { userId: "user-123", country: "nl" })).toBeFalse(),
     ]
   end function)
 

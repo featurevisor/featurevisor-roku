@@ -5,7 +5,7 @@ function featurevisorGetBucketedNumber(bucketKey as String) as Integer
   MAX_BUCKETED_NUMBER = 100000 ' 100% * 1000 to include three decimal places in the same integer value
   MAX_HASH_VALUE& = &hFFFFFFFF&
 
-  hashValue& = MurmurHash().v3(bucketKey, 1)
+  hashValue& = MurmurHash().v3(bucketKey, HASH_SEED)
   ratio# = (hashValue& * 1.0) / (MAX_HASH_VALUE& * 1.0)
 
   return Int(ratio# * MAX_BUCKETED_NUMBER)

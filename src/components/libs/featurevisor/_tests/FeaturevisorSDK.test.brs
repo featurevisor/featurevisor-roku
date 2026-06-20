@@ -1,7 +1,4 @@
 ' @import /components/KopytkoTestSuite.brs from @dazn/kopytko-unit-testing-framework
-' @import /components/promise/Promise.brs from @dazn/kopytko-utils
-' @import /components/promise/PromiseReject.brs from @dazn/kopytko-utils
-' @import /components/promise/PromiseResolve.brs from @dazn/kopytko-utils
 
 function TestSuite__FeaturevisorSDK() as Object
   ts = KopytkoTestSuite()
@@ -37,7 +34,7 @@ function TestSuite__FeaturevisorSDK() as Object
     ' Then
     return [
       expect(passedContext.readyCount).toBe(1),
-      expect(m.__featurevisorSDK.isReady()).toBeTrue()
+      expect(m.__featurevisorSDK.isReady()).toBeTrue(),
     ]
   end function)
 

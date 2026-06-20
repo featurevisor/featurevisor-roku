@@ -59,7 +59,7 @@ function FeaturevisorDatafileReader(datafile as Object) as Object
         print "Featurevisor - Error parsing JSON: ";error
       end try
     end if
-  
+
     return record
   end function
 

@@ -6,22 +6,29 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
-      - name: Semantic Release
-        id: release
-        uses: cycjimmy/semantic-release-action@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Release
+        run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        with:
-          extra_plugins: |
-            @semantic-release/changelog@6
-            @semantic-release/git@10
+          NPM_CONFIG_PROVENANCE: true
