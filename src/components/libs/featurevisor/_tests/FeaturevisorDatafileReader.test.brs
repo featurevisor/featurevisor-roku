@@ -146,6 +146,102 @@ function TestSuite__FeaturevisorDatafileReader() as Object
     ]
   end function)
 
+  it("should return variable keys for a feature (v1 array schema)", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      attributes: [],
+      segments: [],
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: [
+            { key: "color", type: "string", defaultValue: "red" },
+            { key: "count", type: "integer", defaultValue: 0 },
+          ],
+          traffic: [],
+        },
+      ],
+    }
+    reader = FeaturevisorDatafileReader(datafile)
+
+    ' When
+    keys = reader.getVariableKeys("test")
+
+    ' Then
+    return [
+      expect(keys).toHaveLength(2),
+      expect(keys).toContain("color"),
+      expect(keys).toContain("count"),
+      expect(reader.getVariableKeys("missing")).toEqual([]),
+    ]
+  end function)
+
+  it("should return variable keys for a feature (v2 dict schema)", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "2",
+      revision: "1",
+      attributes: [],
+      segments: {},
+      features: {
+        test: {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: {
+            color: { type: "string", defaultValue: "red" },
+            size: { type: "string", defaultValue: "medium" },
+          },
+          traffic: [],
+        },
+      },
+    }
+    reader = FeaturevisorDatafileReader(datafile)
+
+    ' When
+    keys = reader.getVariableKeys("test")
+
+    ' Then
+    return [
+      expect(keys).toHaveLength(2),
+      expect(keys).toContain("color"),
+      expect(keys).toContain("size"),
+    ]
+  end function)
+
+  it("should check hasVariations", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      attributes: [],
+      segments: [],
+      features: [
+        {
+          key: "withVariations",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [],
+        },
+        {
+          key: "noVariations",
+          bucketBy: "userId",
+          traffic: [],
+        },
+      ],
+    }
+    reader = FeaturevisorDatafileReader(datafile)
+
+    ' Then
+    return [
+      expect(reader.hasVariations("withVariations")).toBeTrue(),
+      expect(reader.hasVariations("noVariations")).toBeFalse(),
+      expect(reader.hasVariations("missing")).toBeFalse(),
+    ]
+  end function)
+
   ' F9: v1 array-based datafile backward compatibility
   it("should still work with v1 array-based features and segments", function (_ts as Object) as Object
     ' Given

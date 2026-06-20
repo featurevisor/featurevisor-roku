@@ -10,6 +10,7 @@
 ' @import /components/libs/featurevisor/FeaturevisorDatafileReader.brs
 ' @import /components/libs/featurevisor/FeaturevisorEvaluationReason.const.brs
 ' @import /components/libs/featurevisor/FeaturevisorFeature.brs
+' @import /components/libs/featurevisor/FeaturevisorHooks.brs
 ' @import /components/libs/featurevisor/FeaturevisorLogger.brs
 ' @import /components/libs/featurevisor/FeaturevisorSegments.brs
 
@@ -18,6 +19,7 @@ sub init()
 
   m._arrayUtils = ArrayUtils()
   m._featurevisorEvaluationReason = FeaturevisorEvaluationReason()
+  m._hooksManager = FeaturevisorHooks()
   m._logger = FeaturevisorLogger()
   m._statuses = {
     ready: false,
@@ -49,6 +51,12 @@ sub initialize(options = {} as Object)
   m._refreshInterval = getProperty(options, ["refreshInterval"], m._refreshInterval)
   m._stickyFeatures = getProperty(options, ["stickyFeatures"], m._stickyFeatures)
   m._instanceContext = getProperty(options, ["context"], m._instanceContext)
+
+  if (getType(getProperty(options, ["hooks"])) = "roArray")
+    for each hook in options.hooks
+      m._hooksManager.add(hook)
+    end for
+  end if
 
   if (NOT m._statuses.ready AND m._datafileUrl <> "")
     m._datafileReader = Invalid
@@ -95,6 +103,7 @@ sub clear()
   m._configureBucketValue = Invalid
   m._datafileReader = Invalid
   m._datafileUrl = ""
+  m._hooksManager = FeaturevisorHooks()
   m._initialFeatures = Invalid
   m._instanceContext = {}
   m._interceptContext = Invalid
@@ -106,9 +115,22 @@ sub clear()
   m._stickyFeatures = Invalid
 end sub
 
-function activate(feature as Dynamic, context = {} as Object) as Object
+sub addHook(hook as Object)
+  m._hooksManager.add(hook)
+end sub
+
+sub close()
+  stopRefreshing()
+  clear()
+end sub
+
+sub setLogLevel(level as String)
+  m._logger.setLevel(level)
+end sub
+
+function activate(feature as Dynamic, context = {} as Object, options = {} as Object) as Object
   try
-    evaluation = evaluateVariation(feature, context)
+    evaluation = evaluateVariation(feature, context, options)
     variationValue = getProperty(evaluation, ["variation", "value"], evaluation.variationValue)
 
     if (variationValue = Invalid) then return Invalid
@@ -140,7 +162,38 @@ function activate(feature as Dynamic, context = {} as Object) as Object
   end try
 end function
 
-function evaluateFlag(featureKey as String, context = {} as Object) as Object
+function evaluateFlag(featureKey as String, context = {} as Object, options = {} as Object) as Object
+  try
+    previousSticky = m._stickyFeatures
+    hasStickyOverride = options.sticky <> Invalid
+    if (hasStickyOverride)
+      m._stickyFeatures = _mergeSticky(m._stickyFeatures, options.sticky)
+    end if
+
+    evaluateOptions = _applyBeforeHooks(featureKey, context)
+    result = _evaluateFlagInternal(evaluateOptions.featureKey, evaluateOptions.context)
+    result = _applyAfterHooks(result, evaluateOptions)
+
+    if (hasStickyOverride)
+      m._stickyFeatures = previousSticky
+    end if
+
+    return result
+  catch error
+    if (options.sticky <> Invalid)
+      m._stickyFeatures = previousSticky
+    end if
+    m._logger.error("evaluateFlag error", { featureKey: featureKey, error: error.message })
+
+    return {
+      error: error,
+      featureKey: featureKey,
+      reason: m._featurevisorEvaluationReason.ERROR,
+    }
+  end try
+end function
+
+function _evaluateFlagInternal(featureKey as String, context as Object) as Object
   try
     ' sticky
     if (getProperty(m._stickyFeatures, [featureKey, "enabled"]) <> Invalid)
@@ -168,7 +221,7 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
     if (feature = Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featurevisorEvaluationReason.NOT_FOUND,
+        reason: m._featurevisorEvaluationReason.FEATURE_NOT_FOUND,
       }
     end if
 
@@ -309,7 +362,40 @@ function evaluateFlag(featureKey as String, context = {} as Object) as Object
   end try
 end function
 
-function evaluateVariable(featureV as Dynamic, variableKey as String, context = {} as Object) as Object
+function evaluateVariable(featureV as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Object
+  previousSticky = m._stickyFeatures
+  hasStickyOverride = options.sticky <> Invalid
+
+  try
+    if (hasStickyOverride)
+      m._stickyFeatures = _mergeSticky(m._stickyFeatures, options.sticky)
+    end if
+
+    if (getType(featureV) = "roString")
+      featureKey = featureV
+    else
+      featureKey = featureV.key
+    end if
+
+    evaluateOptions = _applyBeforeHooks(featureKey, context)
+    result = _evaluateVariableInternal(evaluateOptions.featureKey, variableKey, evaluateOptions.context)
+    result = _applyAfterHooks(result, evaluateOptions)
+  catch error
+    m._logger.error("evaluateVariable error", { variableKey: variableKey, error: error.message })
+    result = {
+      error: error,
+      reason: m._featurevisorEvaluationReason.ERROR,
+    }
+  end try
+
+  if (hasStickyOverride)
+    m._stickyFeatures = previousSticky
+  end if
+
+  return result
+end function
+
+function _evaluateVariableInternal(featureV as Dynamic, variableKey as String, context as Object) as Object
   try
     if (getType(featureV) = "roString")
       featureKey = featureV
@@ -344,7 +430,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
         return {
           enabled: false,
           featureKey: featureKey,
-          reason: m._featurevisorEvaluationReason.DEFAULTED,
+          reason: m._featurevisorEvaluationReason.VARIABLE_DEFAULT,
           variableKey: variableKey,
           variableSchema: variableSchema,
           variableValue: variableSchema.defaultValue,
@@ -383,7 +469,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     if (feature = Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featurevisorEvaluationReason.NOT_FOUND,
+        reason: m._featurevisorEvaluationReason.FEATURE_NOT_FOUND,
         variableKey: variableKey,
       }
     end if
@@ -447,7 +533,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
             return featurevisorAllGroupSegmentsAreMatched(parsed, context.finalContext, context.datafileReader)
           end if
 
-          return true
+          return false
         end function, { datafileReader: m._datafileReader, finalContext: finalContext })
 
         if (ruleOverride <> Invalid)
@@ -505,7 +591,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
                 return featurevisorAllGroupSegmentsAreMatched(parsed, context.finalContext, context.datafileReader)
               end if
 
-              return true
+              return false
             end function, { datafileReader: m._datafileReader, finalContext: finalContext })
 
             if (varOverride <> Invalid)
@@ -592,7 +678,7 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
     return {
       bucketValue: bucketValue,
       featureKey: featureKey,
-      reason: m._featurevisorEvaluationReason.DEFAULTED,
+      reason: m._featurevisorEvaluationReason.VARIABLE_DEFAULT,
       variableKey: variableKey,
       variableSchema: variableSchema,
       variableValue: variableSchema.defaultValue,
@@ -609,7 +695,40 @@ function evaluateVariable(featureV as Dynamic, variableKey as String, context = 
   end try
 end function
 
-function evaluateVariation(featureV as Dynamic, context = {} as Object) as Object
+function evaluateVariation(featureV as Dynamic, context = {} as Object, options = {} as Object) as Object
+  previousSticky = m._stickyFeatures
+  hasStickyOverride = options.sticky <> Invalid
+
+  try
+    if (hasStickyOverride)
+      m._stickyFeatures = _mergeSticky(m._stickyFeatures, options.sticky)
+    end if
+
+    if (getType(featureV) = "roString")
+      featureKey = featureV
+    else
+      featureKey = featureV.key
+    end if
+
+    evaluateOptions = _applyBeforeHooks(featureKey, context)
+    result = _evaluateVariationInternal(evaluateOptions.featureKey, evaluateOptions.context)
+    result = _applyAfterHooks(result, evaluateOptions)
+  catch error
+    m._logger.error("evaluateVariation error", { error: error.message })
+    result = {
+      error: error,
+      reason: m._featurevisorEvaluationReason.ERROR,
+    }
+  end try
+
+  if (hasStickyOverride)
+    m._stickyFeatures = previousSticky
+  end if
+
+  return result
+end function
+
+function _evaluateVariationInternal(featureV as Dynamic, context as Object) as Object
   try
     if (getType(featureV) = "roString")
       featureKey = featureV
@@ -661,7 +780,7 @@ function evaluateVariation(featureV as Dynamic, context = {} as Object) as Objec
     if (feature = Invalid)
       return {
         featureKey: featureKey,
-        reason: m._featurevisorEvaluationReason.NOT_FOUND,
+        reason: m._featurevisorEvaluationReason.FEATURE_NOT_FOUND,
       }
     end if
 
@@ -754,9 +873,9 @@ function getRevision() as String
   return m._datafileReader.getRevision()
 end function
 
-function getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+function getVariable(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
   try
-    evaluation = evaluateVariable(feature, variableKey, context)
+    evaluation = evaluateVariable(feature, variableKey, context, options)
 
     if (evaluation.variableValue <> Invalid)
       if (getType(evaluation.variableValue) = "roString" AND getProperty(evaluation, ["variableSchema", "type"], "") = "json")
@@ -764,6 +883,10 @@ function getVariable(feature as Dynamic, variableKey as String, context = {} as 
       end if
 
       return evaluation.variableValue
+    end if
+
+    if (options.defaultVariableValue <> Invalid)
+      return options.defaultVariableValue
     end if
 
     return Invalid
@@ -816,14 +939,22 @@ function getVariableString(feature as Dynamic, variableKey as String, context = 
   return _getValueByType(variableValue, "string")
 end function
 
-function getVariation(feature as Dynamic, context = {} as Object) as Dynamic
+function getVariation(feature as Dynamic, context = {} as Object, options = {} as Object) as Dynamic
   try
-    evaluation = evaluateVariation(feature, context)
+    evaluation = evaluateVariation(feature, context, options)
+    result = Invalid
 
-    if (evaluation.variationValue <> Invalid) then return evaluation.variationValue
-    if (evaluation.variation <> Invalid) then return evaluation.variation.value
+    if (evaluation.variationValue <> Invalid)
+      result = evaluation.variationValue
+    else if (evaluation.variation <> Invalid)
+      result = evaluation.variation.value
+    end if
 
-    return Invalid
+    if (result = Invalid AND options.defaultVariationValue <> Invalid)
+      result = options.defaultVariationValue
+    end if
+
+    return result
   catch error
     m._logger.error("getVariation error", { feature: feature, error: error.message })
 
@@ -831,9 +962,9 @@ function getVariation(feature as Dynamic, context = {} as Object) as Dynamic
   end try
 end function
 
-function isEnabled(featureKey as String, context = {} as Object) as Boolean
+function isEnabled(featureKey as String, context = {} as Object, options = {} as Object) as Boolean
   try
-    evaluation = getProperty(evaluateFlag(featureKey, context), ["enabled"], false)
+    evaluation = getProperty(evaluateFlag(featureKey, context, options), ["enabled"], false)
 
     if (getType(evaluation) = "roBoolean") then return evaluation
 
@@ -848,10 +979,14 @@ end function
 sub refresh()
   if (m._statuses.refreshInProgress)
     m._logger.warn("refresh already in progress, skipping")
+
+    return
   end if
 
-  if (m._datafileUrl = Invalid)
+  if (m._datafileUrl = Invalid OR m._datafileUrl = "")
     m._logger.warn("cannot refresh since `datafileUrl` is not provided")
+
+    return
   end if
 
   m._statuses.refreshInProgress = true
@@ -889,7 +1024,68 @@ sub setDatafile(datafile as Dynamic)
       datafileScoped = ParseJson(datafileScoped)
     end if
 
-    m._datafileReader = FeaturevisorDatafileReader(datafileScoped)
+    previousRevision = ""
+    previousFeatureKeys = []
+    oldReader = m._datafileReader
+    if (oldReader <> Invalid)
+      previousRevision = oldReader.getRevision()
+      previousFeatureKeys = oldReader.getFeatureKeys()
+    end if
+
+    newReader = FeaturevisorDatafileReader(datafileScoped)
+    m._datafileReader = newReader
+
+    newRevision = newReader.getRevision()
+    newFeatureKeys = newReader.getFeatureKeys()
+
+    addedFeatures = m._arrayUtils.filter(newFeatureKeys, function (featureKey as String, context as Object) as Boolean
+      return NOT m._arrayUtils.contains(context.previousFeatureKeys, function (existing as String, innerContext as Object) as Boolean
+        return existing = innerContext.featureKey
+      end function, { featureKey: featureKey })
+    end function, { previousFeatureKeys: previousFeatureKeys })
+
+    removedFeatures = m._arrayUtils.filter(previousFeatureKeys, function (featureKey as String, context as Object) as Boolean
+      return NOT m._arrayUtils.contains(context.newFeatureKeys, function (existing as String, innerContext as Object) as Boolean
+        return existing = innerContext.featureKey
+      end function, { featureKey: featureKey })
+    end function, { newFeatureKeys: newFeatureKeys })
+
+    changedFeatures = m._arrayUtils.filter(newFeatureKeys, function (featureKey as String, context as Object) as Boolean
+      if (context.oldReader = Invalid) then return false
+
+      existsInPrevious = m._arrayUtils.contains(context.previousFeatureKeys, function (existing as String, innerContext as Object) as Boolean
+        return existing = innerContext.featureKey
+      end function, { featureKey: featureKey })
+      if (NOT existsInPrevious) then return false
+
+      newFeature = context.newReader.getFeature(featureKey)
+      oldFeature = context.oldReader.getFeature(featureKey)
+      if (newFeature = Invalid OR oldFeature = Invalid) then return false
+
+      newHash = getProperty(newFeature, ["hash"], Invalid)
+      oldHash = getProperty(oldFeature, ["hash"], Invalid)
+      if (newHash = Invalid OR oldHash = Invalid) then return false
+
+      return newHash <> oldHash
+    end function, { previousFeatureKeys: previousFeatureKeys, newReader: newReader, oldReader: oldReader })
+
+    allChangedFeatures = []
+    for each featureKey in addedFeatures
+      allChangedFeatures.push(featureKey)
+    end for
+    for each featureKey in removedFeatures
+      allChangedFeatures.push(featureKey)
+    end for
+    for each featureKey in changedFeatures
+      allChangedFeatures.push(featureKey)
+    end for
+
+    m.top.datafileChange = {
+      features: allChangedFeatures,
+      previousRevision: previousRevision,
+      revision: newRevision,
+      revisionChanged: previousRevision <> newRevision,
+    }
   catch error
     m._logger.error("could not parse datafile", { error: error.message })
   end try
@@ -907,6 +1103,11 @@ sub setContext(context as Object, replace = false as Boolean)
       m._instanceContext[key] = context[key]
     end for
   end if
+
+  m.top.contextChange = {
+    context: m._instanceContext,
+    replaced: replace,
+  }
 end sub
 
 function getContext(context = {} as Object) as Object
@@ -988,6 +1189,8 @@ sub setSticky(stickyFeatures as Object, replace = false as Boolean)
       m._stickyFeatures[key] = stickyFeatures[key]
     end for
   end if
+
+  m.top.stickyChange = { replaced: replace }
 end sub
 
 ' @deprecated Use setSticky instead
@@ -1063,11 +1266,81 @@ function _getValueByType(value as Dynamic, fieldType as String) as Dynamic
   end try
 end function
 
+function _callHook(hook as Object, key as String, arg1 = Invalid as Dynamic, arg2 = Invalid as Dynamic) as Dynamic
+  func = hook[key]
+
+  if (func = Invalid OR getType(func) <> "roFunction") then return Invalid
+
+  if (hook.context <> Invalid)
+    hook.context["$$hook"] = func
+    if (arg2 <> Invalid)
+      result = hook.context["$$hook"](arg1, arg2)
+    else
+      result = hook.context["$$hook"](arg1)
+    end if
+    hook.context.delete("$$hook")
+  else
+    m["$$hook"] = func
+    if (arg2 <> Invalid)
+      result = m["$$hook"](arg1, arg2)
+    else
+      result = m["$$hook"](arg1)
+    end if
+    m.delete("$$hook")
+  end if
+
+  return result
+end function
+
+function _applyBeforeHooks(featureKey as String, context as Object) as Object
+  evaluateOptions = { featureKey: featureKey, context: context }
+  hooks = m._hooksManager.getAll()
+
+  for each hookName in hooks
+    result = _callHook(hooks[hookName], "before", evaluateOptions)
+    if (result <> Invalid) then evaluateOptions = result
+  end for
+
+  return evaluateOptions
+end function
+
+function _applyAfterHooks(result as Object, evaluateOptions as Object) as Object
+  hooks = m._hooksManager.getAll()
+
+  for each hookName in hooks
+    updated = _callHook(hooks[hookName], "after", result, evaluateOptions)
+    if (updated <> Invalid) then result = updated
+  end for
+
+  return result
+end function
+
+function _mergeSticky(base as Object, overrides as Object) as Object
+  merged = {}
+  if (base <> Invalid)
+    for each key in base
+      merged[key] = base[key]
+    end for
+  end if
+  for each key in overrides
+    merged[key] = overrides[key]
+  end for
+
+  return merged
+end function
+
 function _getBucketValue(feature as Object, finalContext as Object) as Integer
   bucketKey = _getBucketKey(feature, finalContext)
   bucketValue = featurevisorGetBucketedNumber(bucketKey)
+  bucketValue = _configureBucketValue(feature, finalContext, bucketValue)
+  hooks = m._hooksManager.getAll()
 
-  return _configureBucketValue(feature, finalContext, bucketValue)
+  for each hookName in hooks
+    updated = _callHook(hooks[hookName], "bucketValue", { feature: feature, context: finalContext, bucketValue: bucketValue })
+    if (updated <> Invalid) then bucketValue = updated
+  end for
+
+  return bucketValue
 end function
 
 function _getBucketKey(feature as Object, context as Object) as String
@@ -1109,7 +1382,15 @@ function _getBucketKey(feature as Object, context as Object) as String
 
   bucketKey.push(featureKey)
 
-  return _configureBucketKey(feature, context, bucketKey.join(m._bucketKeySeparator))
+  bucketKeyResult = _configureBucketKey(feature, context, bucketKey.join(m._bucketKeySeparator))
+  hooks = m._hooksManager.getAll()
+
+  for each hookName in hooks
+    updated = _callHook(hooks[hookName], "bucketKey", { feature: feature, context: context, bucketKey: bucketKeyResult })
+    if (updated <> Invalid) then bucketKeyResult = updated
+  end for
+
+  return bucketKeyResult
 end function
 
 function _configureBucketKey(feature as Dynamic, context as Object, bucketKey as String) as String

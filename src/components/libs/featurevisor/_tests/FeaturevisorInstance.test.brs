@@ -1369,7 +1369,7 @@ function TestSuite__FeaturevisorInstance() as Object
             {
               value: "treatment",
               variableOverrides: {
-                color: [{ value: "blue" }],
+                color: [{ value: "blue", segments: "*" }],
               },
             },
           ],
@@ -1486,11 +1486,347 @@ function TestSuite__FeaturevisorInstance() as Object
     return expect(evaluation.reason).toBe("variable_not_found")
   end function)
 
+  it("should use feature_not_found reason when feature is missing", function (_ts as Object) as String
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' Then
+    return expect(evaluateFlag("missing").reason).toBe("feature_not_found")
+  end function)
+
+  it("should use variable_default reason when useDefaultWhenDisabled is set", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: [
+            { key: "color", type: "string", defaultValue: "red", useDefaultWhenDisabled: true },
+          ],
+          traffic: [],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' Then
+    return expect(evaluateVariable("test", "color", { userId: "123" }).reason).toBe("variable_default")
+  end function)
+
+  it("should not match variableOverride with no conditions or segments", function (_ts as Object) as String
+    ' v2 variableOverrides entry with neither conditions nor segments must be skipped (return false)
+    datafile = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        test: {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: {
+            color: { type: "string", defaultValue: "red" },
+          },
+          variations: [
+            { value: "control" },
+            {
+              value: "treatment",
+              variableOverrides: {
+                color: [{ value: "blue" }],
+              },
+            },
+          ],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 0] },
+                { variation: "treatment", range: [0, 100000] },
+              ],
+            },
+          ],
+        },
+      },
+      attributes: [],
+      segments: {},
+    }
+    initialize({ datafile: datafile })
+
+    return expect(getVariable("test", "color", { userId: "user-a" })).toBe("red")
+  end function)
+
+  it("should match variableOverride with segments wildcard", function (_ts as Object) as String
+    ' An override with segments: "*" matches unconditionally
+    datafile = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        test: {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: {
+            color: { type: "string", defaultValue: "red" },
+          },
+          variations: [
+            { value: "control" },
+            {
+              value: "treatment",
+              variableOverrides: {
+                color: [{ value: "blue", segments: "*" }],
+              },
+            },
+          ],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 0] },
+                { variation: "treatment", range: [0, 100000] },
+              ],
+            },
+          ],
+        },
+      },
+      attributes: [],
+      segments: {},
+    }
+    initialize({ datafile: datafile })
+
+    return expect(getVariable("test", "color", { userId: "user-a" })).toBe("blue")
+  end function)
+
+  it("should not execute refresh twice when already in progress", function (_ts as Object) as Object
+    ' Given
+    mockFunction("createRequest").returnValue(Promise())
+
+    initialize({ datafileUrl: "http://localhost:3000/datafile.json" })
+    m._statuses.refreshInProgress = true
+
+    ' When
+    refresh()
+
+    ' Then — createRequest was only called once (for initialize), not again for the blocked refresh
+    return expect("createRequest").toHaveBeenCalledTimes(1)
+  end function)
+
+  it("should emit datafileChange event when datafile is set", function (_ts as Object) as Object
+    ' Given
+    m.__datafileChangedPayload = Invalid
+    m.top.observeFieldScoped("datafileChange", "__callback_onDatafileChanged")
+
+    datafile = {
+      schemaVersion: "1",
+      revision: "2.0",
+      features: [
+        { key: "newFeature", bucketBy: "userId", traffic: [] },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    m.top.unobserveFieldScoped("datafileChange")
+
+    return [
+      expect(m.__datafileChangedPayload).toBeValid(),
+      expect(m.__datafileChangedPayload.revision).toBe("2.0"),
+    ]
+  end function)
+
+  it("should emit contextChange event when context is set", function (_ts as Object) as Object
+    ' Given
+    m.__contextChangedPayload = Invalid
+    m.top.observeFieldScoped("contextChange", "__callback_onContextChanged")
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When
+    setContext({ userId: "abc" })
+
+    ' Then
+    m.top.unobserveFieldScoped("contextChange")
+
+    return [
+      expect(m.__contextChangedPayload).toBeValid(),
+      expect(m.__contextChangedPayload.context.userId).toBe("abc"),
+    ]
+  end function)
+
+  it("should emit stickyChange event when sticky is set", function (_ts as Object) as Object
+    ' Given
+    m.__stickyChangedPayload = Invalid
+    m.top.observeFieldScoped("stickyChange", "__callback_onStickyChanged")
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When
+    setSticky({ myFeature: { enabled: true } })
+
+    ' Then
+    m.top.unobserveFieldScoped("stickyChange")
+
+    return expect(m.__stickyChangedPayload).toBeValid()
+  end function)
+
+  it("should apply before hook (no context) to modify featureKey", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    addHook({
+      name: "redirectHook",
+      before: function (options as Object) as Object
+        options.featureKey = "redirectedByHook"
+
+        return options
+      end function,
+    })
+
+    return expect(evaluateFlag("originalKey", {}).featureKey).toBe("redirectedByHook")
+  end function)
+
+  it("should apply before hook (with context) so m inside the hook is that context", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    hookContext = { redirectTarget: "fromContext" }
+
+    addHook({
+      name: "contextHook",
+      context: hookContext,
+      before: function (options as Object) as Object
+        options.featureKey = m.redirectTarget
+
+        return options
+      end function,
+    })
+
+    return expect(evaluateFlag("originalKey", {}).featureKey).toBe("fromContext")
+  end function)
+
+  it("should apply after hook (no context) to modify evaluation result", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    addHook({
+      name: "overrideHook",
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.reason = "overridden_by_hook"
+
+        return evaluation
+      end function,
+    })
+
+    return expect(evaluateFlag("anyKey", {}).reason).toBe("overridden_by_hook")
+  end function)
+
+  it("should apply after hook (with context) so m inside the hook is that context", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    hookContext = { customReason: "from_context_after" }
+
+    addHook({
+      name: "contextAfterHook",
+      context: hookContext,
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.reason = m.customReason
+
+        return evaluation
+      end function,
+    })
+
+    return expect(evaluateFlag("anyKey", {}).reason).toBe("from_context_after")
+  end function)
+
+  it("should reject duplicate hook names", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    addHook({ name: "myHook", before: function (options as Object) as Object : return options : end function })
+    addHook({ name: "myHook", before: function (options as Object) as Object : return options : end function })
+
+    return expect(m._hooksManager.getAll().count()).toBe(1)
+  end function)
+
+  it("should apply OverrideOptions sticky per call", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 0,
+              allocation: [],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' The feature is disabled (percentage: 0)
+    ' But with per-call sticky, it should be enabled
+    callSticky = { test: { enabled: true } }
+
+    return [
+      expect(isEnabled("test", {})).toBeFalse(),
+      expect(isEnabled("test", {}, { sticky: callSticky })).toBeTrue(),
+      expect(isEnabled("test", {})).toBeFalse(),
+    ]
+  end function)
+
+  it("should return defaultVariationValue from options when no variation matched", function (_ts as Object) as String
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When / Then
+    return expect(getVariation("missingFeature", {}, { defaultVariationValue: "fallback" })).toBe("fallback")
+  end function)
+
+  it("should return defaultVariableValue from options when variable not found", function (_ts as Object) as String
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When / Then
+    return expect(getVariable("missingFeature", "color", {}, { defaultVariableValue: "orange" })).toBe("orange")
+  end function)
+
+  it("should support setLogLevel", function (_ts as Object) as Object
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When — should not throw
+    setLogLevel("debug")
+    setLogLevel("warn")
+
+    ' Then — no assertion needed; the test passes if no error is thrown
+    return expect(true).toBeTrue()
+  end function)
+
   return ts
 end function
 
 sub __callback_onActivation()
   m.__onActivation()
+end sub
+
+sub __callback_onContextChanged()
+  m.__contextChangedPayload = m.top.contextChange
+end sub
+
+sub __callback_onDatafileChanged()
+  m.__datafileChangedPayload = m.top.datafileChange
 end sub
 
 sub __callback_onReady()
@@ -1499,6 +1835,10 @@ end sub
 
 sub __callback_onRefresh()
   m.__onRefresh()
+end sub
+
+sub __callback_onStickyChanged()
+  m.__stickyChangedPayload = m.top.stickyChange
 end sub
 
 sub __callback_onUpdate()
