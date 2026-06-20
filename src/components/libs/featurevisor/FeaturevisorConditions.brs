@@ -4,9 +4,7 @@
 
 function featurevisorAllConditionsAreMatched(condition as Object, context as Object) as Boolean
   functionScope = {}
-
   functionScope._arrayUtils = ArrayUtils()
-
   functionScope._allConditionsAreMatched = function (conditions as Object, context as Object) as Object
     if (conditions = Invalid) then return true
 
@@ -68,11 +66,11 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
         else
           dateInCondition = condition.value
         end if
-  
+
         if (condition["operator"] = "before")
           return dateInContext.asSeconds() < dateInCondition.asSeconds()
         end if
-  
+
         return dateInContext.asSeconds() > dateInCondition.asSeconds()
       else if (getType(condition.value) = "roArray" AND context.doesExist(condition.attribute) AND (context[condition.attribute] = Invalid OR getType(context[condition.attribute]) = "roString" OR m._isNumber(context[condition.attribute])))
         if (condition["operator"] = "in")

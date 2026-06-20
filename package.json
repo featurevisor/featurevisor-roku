@@ -24,19 +24,26 @@
     "!**/_tests"
   ],
   "scripts": {
-    "lint": "eslint --ext .brs src/",
+    "format": "kopytko-format --write \"src/**/*.brs\"",
+    "format:check": "kopytko-format --check \"src/**/*.brs\"",
+    "lint": "kopytko-lint --check --source-dir src",
+    "lint:fix": "kopytko-lint --fix --source-dir src",
     "test": "node node_modules/@dazn/kopytko-unit-testing-framework/scripts/test.js"
   },
   "dependencies": {
-    "@dazn/kopytko-framework": "^3.0.0",
-    "@dazn/kopytko-utils": "^2.6.0",
-    "compare-versions-roku": "^1.0.1",
-    "murmurhash-roku": "^1.0.0"
+    "@dazn/kopytko-framework": "^3.4.2",
+    "@dazn/kopytko-utils": "^2.8.1",
+    "compare-versions-roku": "^1.0.2",
+    "murmurhash-roku": "^1.0.1"
   },
   "devDependencies": {
-    "@dazn/eslint-plugin-kopytko": "^2.1.0",
-    "@dazn/kopytko-unit-testing-framework": "^2.4.1",
-    "eslint": "8.57.0"
+    "@dazn/kopytko-unit-testing-framework": "^2.6.5",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.8",
+    "kopytko-formatter": "^1.1.5",
+    "kopytko-linter": "^1.4.0",
+    "semantic-release": "^25.0.5"
   },
   "license": "MIT",
   "kopytkoModuleDir": "src/",
@@ -52,15 +59,28 @@
     "registry": "https://registry.npmjs.org/"
   },
   "release": {
-    "branches": [
-      "main"
-    ],
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
-      "@semantic-release/npm",
+      [
+        "@semantic-release/npm",
+        {
+          "npmPublish": true,
+          "provenance": true
+        }
+      ],
       "@semantic-release/changelog",
-      "@semantic-release/git",
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json",
+            "package-lock.json"
+          ],
+          "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        }
+      ],
       "@semantic-release/github"
     ]
   }
