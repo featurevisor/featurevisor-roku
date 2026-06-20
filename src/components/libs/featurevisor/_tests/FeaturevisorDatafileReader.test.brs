@@ -72,5 +72,107 @@ function TestSuite__FeaturevisorDatafileReader() as Object
     ]
   end function)
 
+  ' F9: v2 datafile with dict-based features and segments
+  it("should return requested entities from v2 dict-based datafile", function (_ts as Object) as Object
+    ' Given
+    v2Datafile = {
+      schemaVersion: "2",
+      revision: "2",
+      attributes: [
+        { key: "userId", type: "string", capture: true },
+      ],
+      segments: {
+        netherlands: {
+          key: "netherlands",
+          conditions: [{ attribute: "country", operator: "equals", value: "nl" }],
+        },
+      },
+      features: {
+        myFeature: {
+          key: "myFeature",
+          bucketBy: "userId",
+          variablesSchema: {
+            color: { key: "color", type: "string", defaultValue: "red" },
+          },
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [{ variation: "control", range: [0, 100000] }],
+            },
+          ],
+        },
+      },
+    }
+
+    ' When
+    reader = FeaturevisorDatafileReader(v2Datafile)
+
+    ' Then
+    return [
+      expect(reader.getRevision()).toBe("2"),
+      expect(reader.getSchemaVersion()).toBe("2"),
+      expect(reader.getSegment("netherlands")).toEqual(v2Datafile.segments.netherlands),
+      expect(reader.getSegment("unknown")).toBeInvalid(),
+      expect(reader.getFeature("myFeature")).toEqual(v2Datafile.features.myFeature),
+      expect(reader.getFeature("unknown")).toBeInvalid(),
+    ]
+  end function)
+
+  ' F9: getFeatureKeys() returns all feature keys
+  it("should return all feature keys", function (_ts as Object) as Object
+    ' Given
+    v2Datafile = {
+      schemaVersion: "2",
+      revision: "1",
+      attributes: [],
+      segments: {},
+      features: {
+        featureA: { key: "featureA", bucketBy: "userId", traffic: [] },
+        featureB: { key: "featureB", bucketBy: "userId", traffic: [] },
+      },
+    }
+
+    ' When
+    reader = FeaturevisorDatafileReader(v2Datafile)
+    keys = reader.getFeatureKeys()
+
+    ' Then
+    return [
+      expect(keys.count()).toBe(2),
+      expect(keys.doesExist("featureA")).toBeTrue(),
+      expect(keys.doesExist("featureB")).toBeTrue(),
+    ]
+  end function)
+
+  ' F9: v1 array-based datafile backward compatibility
+  it("should still work with v1 array-based features and segments", function (_ts as Object) as Object
+    ' Given
+    v1Datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      attributes: [],
+      segments: [
+        { key: "segA", conditions: [{ attribute: "country", operator: "equals", value: "nl" }] },
+      ],
+      features: [
+        { key: "featureA", bucketBy: "userId", traffic: [] },
+      ],
+    }
+
+    ' When
+    reader = FeaturevisorDatafileReader(v1Datafile)
+    keys = reader.getFeatureKeys()
+
+    ' Then
+    return [
+      expect(reader.getFeature("featureA")).toEqual(v1Datafile.features[0]),
+      expect(reader.getSegment("segA")).toEqual(v1Datafile.segments[0]),
+      expect(keys.count()).toBe(1),
+      expect(keys.doesExist("featureA")).toBeTrue(),
+    ]
+  end function)
+
   return ts
 end function

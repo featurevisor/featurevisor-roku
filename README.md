@@ -64,10 +64,13 @@ Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sd
   - [`configureAndInterceptStaticContext`](#configureandinterceptstaticcontext)
   - [`configureBucketKey`](#configurebucketkey)
   - [`configureBucketValue`](#configurebucketvalue)
+  - [`context`](#context)
   - [`datafile`](#datafile)
   - [`datafileUrl`](#datafileurl)
   - [`initialFeatures`](#initialfeatures)
   - [`interceptContext`](#interceptcontext)
+  - [`logLevel`](#loglevel)
+  - [`logger`](#logger)
   - [`onActivation`](#onactivation)
   - [`onReady`](#onready)
   - [`onRefresh`](#onrefresh)
@@ -79,6 +82,13 @@ Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sd
   - [`f.getVariation`](#fgetvariation)
   - [`f.getVariable`](#fgetvariable)
   - [`f.activate`](#factivate)
+  - [`f.getAllEvaluations`](#fgetallevaluations)
+  - [`f.evaluateFlag`](#fevaluateflag)
+  - [`f.evaluateVariation`](#fevaluatevariation)
+  - [`f.evaluateVariable`](#fevaluatevariable)
+  - [`f.getFeature`](#fgetfeature)
+  - [`f.getContext`](#fgetcontext)
+  - [`f.setContext`](#fsetcontext)
   - [`f.onActivation`](#fonactivation)
   - [`f.onReady`](#fonready)
   - [`f.onRefresh`](#fonrefresh)
@@ -88,9 +98,11 @@ Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sd
   - [`f.isReady`](#fisready)
   - [`f.refresh`](#frefresh)
   - [`f.setDatafile`](#fsetdatafile)
-  - [`f.setStickyFeatures`](#fsetstickyfeatures)
+  - [`f.setSticky`](#fsetsticky)
+  - [`f.setStickyFeatures`](#fsetstickyfeatures) *(deprecated)*
   - [`f.startRefreshing`](#fstartrefreshing)
   - [`f.stopRefreshing`](#fstoprefreshing)
+- [Evaluation object](#evaluation-object)
 
 ## Installation
 
@@ -185,6 +197,28 @@ sub init()
 end sub
 ```
 
+### `context`
+
+- Type: `associativeArray`
+- Required: no
+
+Set a persistent instance-level context that is automatically merged with per-call context in all evaluation functions. Per-call context values take precedence over instance context values.
+
+```brightscript
+' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
+
+sub init()
+  f = FeaturevisorSDK()
+  f.createInstance({
+    datafileUrl: "<featurevisor-datafile-url>",
+    context: {
+      userId: "user-123",
+      country: "nl",
+    },
+  })
+end sub
+```
+
 ### `datafile`
 
 - Type: `associativeArray`
@@ -256,6 +290,38 @@ sub init()
     end function,
   })
 end sub
+```
+
+### `logLevel`
+
+- Type: `string`
+- Required: no
+- Default: `"info"`
+- Allowed values: `"debug"` | `"info"` | `"warn"` | `"error"` | `"fatal"`
+
+Controls the minimum severity of log messages printed by the SDK.
+
+```brightscript
+f.createInstance({
+  datafileUrl: "<featurevisor-datafile-url>",
+  logLevel: "debug",
+})
+```
+
+### `logger`
+
+- Type: `function`
+- Required: no
+
+Custom log handler. Receives `level` (string), `message` (string), and `details` (associativeArray). When provided, replaces the default `print`-based output.
+
+```brightscript
+f.createInstance({
+  datafileUrl: "<featurevisor-datafile-url>",
+  logger: function (level as String, message as String, details as Object)
+    print "[MyApp] [";level;"] ";message
+  end function,
+})
 ```
 
 ### `onActivation`
@@ -454,6 +520,99 @@ This is a convenience method meant to be called when you know the User has been 
 
 > `f.activate(feature as Dynamic, context = {} as Object) as Object`
 
+### `f.getAllEvaluations`
+
+Evaluate all features (or a specified subset) at once and return an associativeArray keyed by feature key.
+
+> `f.getAllEvaluations(context = {} as Object, featureKeys = [] as Object) as Object`
+
+Each entry contains:
+- `enabled` (Boolean) — whether the feature is enabled
+- `variation` (Dynamic) — variation value, if the feature has variations
+- `variables` (associativeArray) — map of all variable values, if the feature has variables
+
+```brightscript
+evaluations = f.getAllEvaluations({ userId: "user-123" })
+' evaluations = {
+'   myFeature: { enabled: true, variation: "control", variables: { color: "blue" } },
+'   anotherFeature: { enabled: false },
+' }
+```
+
+Pass a list of feature keys to evaluate only a subset:
+
+```brightscript
+evaluations = f.getAllEvaluations({ userId: "user-123" }, ["myFeature", "anotherFeature"])
+```
+
+### `f.evaluateFlag`
+
+Returns the full evaluation object for a feature flag, including the reason why the result was produced. Useful for debugging or when you need more than just the boolean result.
+
+> `f.evaluateFlag(featureKey as String, context = {} as Object) as Object`
+
+```brightscript
+evaluation = f.evaluateFlag("myFeature", { userId: "user-123" })
+' evaluation.enabled => true/false
+' evaluation.reason  => "allocated", "forced", "sticky", etc.
+```
+
+### `f.evaluateVariation`
+
+Returns the full evaluation object for a feature variation.
+
+> `f.evaluateVariation(feature as Dynamic, context = {} as Object) as Object`
+
+```brightscript
+evaluation = f.evaluateVariation("myFeature", { userId: "user-123" })
+' evaluation.variationValue => "control" / "treatment" / Invalid
+' evaluation.reason         => "allocated", "forced", "no_match", etc.
+```
+
+### `f.evaluateVariable`
+
+Returns the full evaluation object for a feature variable.
+
+> `f.evaluateVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Object`
+
+```brightscript
+evaluation = f.evaluateVariable("myFeature", "color", { userId: "user-123" })
+' evaluation.variableValue  => "blue"
+' evaluation.reason         => "allocated", "defaulted", "variable_not_found", etc.
+```
+
+### `f.getFeature`
+
+Returns the raw feature definition object from the datafile, or `Invalid` if the feature is not found.
+
+> `f.getFeature(feature as Dynamic) as Object`
+
+### `f.getContext`
+
+Returns the merged context (instance-level context + per-call context).
+
+> `f.getContext(context = {} as Object) as Object`
+
+```brightscript
+mergedContext = f.getContext({ sessionId: "session-456" })
+```
+
+### `f.setContext`
+
+Sets or merges the instance-level context. This context is automatically merged into every evaluation call.
+
+> `f.setContext(context as Object, replace = false as Boolean)`
+
+- `replace = false` (default): merges `context` into the existing instance context
+- `replace = true`: replaces the instance context entirely
+
+```brightscript
+f.setContext({ userId: "user-123", country: "nl" })
+
+' Later, replace entirely
+f.setContext({ userId: "user-456" }, true)
+```
+
 ### `f.onActivation`
 
 Adds on activation callback which will be called after an feature activation.
@@ -510,9 +669,29 @@ Set datafile manually.
 
 > `f.setDatafile(datafile as Object)`
 
+### `f.setSticky`
+
+Set or merge sticky features. When `replace` is `false` (default), the provided features are merged with the existing ones. When `replace` is `true`, the entire sticky map is replaced.
+
+> `f.setSticky(stickyFeatures as Object, replace = false as Boolean)`
+
+```brightscript
+' Merge sticky features
+f.setSticky({
+  myFeature: { enabled: true, variation: "control" },
+})
+
+' Replace all sticky features at once
+f.setSticky({
+  myFeature: { enabled: false },
+}, true)
+```
+
 ### `f.setStickyFeatures`
 
-Set sticky features.
+> **Deprecated** — use `f.setSticky` instead.
+
+Set sticky features, replacing the entire map.
 
 > `f.setStickyFeatures(stickyFeatures as Object)`
 
@@ -527,6 +706,48 @@ Resume or start refreshing if refreshInterval was provided.
 Stop refreshing.
 
 > `f.stopRefreshing()`
+
+## Evaluation object
+
+The `evaluateFlag`, `evaluateVariation`, and `evaluateVariable` methods return an associativeArray with the following shape:
+
+| Field           | Type            | Description                                            |
+| --------------- | --------------- | ------------------------------------------------------ |
+| `featureKey`    | String          | The evaluated feature key                              |
+| `reason`        | String          | Why this result was produced (see table below)         |
+| `enabled`       | Boolean         | Whether the feature is enabled (flag evaluations)      |
+| `variation`     | associativeArray | Matched variation object (variation evaluations)      |
+| `variationValue`| Dynamic         | The variation's value                                  |
+| `variableKey`   | String          | The evaluated variable key (variable evaluations)      |
+| `variableValue` | Dynamic         | The resolved variable value                            |
+| `variableSchema`| associativeArray | The variable schema definition                        |
+| `bucketValue`   | Integer         | The bucket value used (0–100000)                       |
+| `ruleKey`       | String          | The matched traffic rule key                           |
+| `error`         | associativeArray | Error details if `reason` is `"error"`                |
+
+### Evaluation reasons
+
+| Reason                       | Description                                                        |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `"allocated"`                | Regular bucketing allocation matched                               |
+| `"defaulted"`                | Variable default value used (e.g. `useDefaultWhenDisabled: true`)  |
+| `"disabled"`                 | Feature is disabled                                                |
+| `"error"`                    | An unexpected error occurred during evaluation                     |
+| `"forced"`                   | Matched a forced rule                                              |
+| `"initial"`                  | Instance not yet ready; using `initialFeatures` value              |
+| `"no_match"`                 | No traffic rule matched                                            |
+| `"no_variations"`            | Feature has no variations defined                                  |
+| `"not_found"`                | Feature not found in the datafile                                  |
+| `"variable_not_found"`       | Variable key not found in the feature's schema                     |
+| `"out_of_range"`             | Feature is in a mutually-exclusive group but bucket is out of range|
+| `"override"`                 | Variable overridden by a condition inside a variation (v1 format)  |
+| `"required"`                 | A required feature is not enabled                                  |
+| `"rule"`                     | Matched a traffic rule                                             |
+| `"sticky"`                   | Using a sticky feature override                                    |
+| `"variable_disabled"`        | Feature is disabled; variable `disabledValue` is returned          |
+| `"variable_override_rule"`   | Variable overridden directly by a traffic rule                     |
+| `"variable_override_variation"` | Variable overridden by a condition inside a variation           |
+| `"variation_disabled"`       | Feature is disabled; `disabledVariationValue` is returned          |
 
 ## License <!-- omit in toc -->
 

@@ -82,6 +82,16 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
             return context.compareValue <> Invalid AND item.toStr() = context.compareValue.toStr()
           end function, { compareValue: context[condition.attribute] })
         end if
+      else if (context.doesExist(condition.attribute) AND getType(context[condition.attribute]) = "roArray")
+        if (condition["operator"] = "includes")
+          return m._arrayUtils.contains(context[condition.attribute], function (item as Object, ctx as Object) as Boolean
+            return item.toStr() = ctx.compareValue.toStr()
+          end function, { compareValue: condition.value })
+        else if (condition["operator"] = "notIncludes")
+          return NOT m._arrayUtils.contains(context[condition.attribute], function (item as Object, ctx as Object) as Boolean
+            return item.toStr() = ctx.compareValue.toStr()
+          end function, { compareValue: condition.value })
+        end if
       else if (getType(context[condition.attribute]) = "roString" AND getType(condition.value) = "roString")
         if (condition["operator"] = "equals")
           return context[condition.attribute] = condition.value
@@ -107,6 +117,18 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
           return compareVersions(context[condition.attribute], condition.value) = -1
         else if (condition["operator"] = "semverLessThanOrEquals")
           return compareVersions(context[condition.attribute], condition.value) <= 0
+        else if (condition["operator"] = "matches")
+          flags = ""
+          if (condition.doesExist("regexFlags") AND getType(condition.regexFlags) = "roString") then flags = condition.regexFlags
+          regex = CreateObject("roRegex", condition.value, flags)
+
+          return regex.isMatch(context[condition.attribute])
+        else if (condition["operator"] = "notMatches")
+          flags = ""
+          if (condition.doesExist("regexFlags") AND getType(condition.regexFlags) = "roString") then flags = condition.regexFlags
+          regex = CreateObject("roRegex", condition.value, flags)
+
+          return NOT regex.isMatch(context[condition.attribute])
         end if
       else if (m._isNumber(context[condition.attribute]) AND m._isNumber(condition.value))
         if (condition["operator"] = "equals")
@@ -134,6 +156,12 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
         else if (condition["operator"] = "notEquals")
           return false
         end if
+      end if
+    else if (condition.doesExist("operator") AND condition.doesExist("attribute"))
+      if (condition["operator"] = "exists")
+        return context.doesExist(condition.attribute)
+      else if (condition["operator"] = "notExists")
+        return NOT context.doesExist(condition.attribute)
       end if
     end if
 

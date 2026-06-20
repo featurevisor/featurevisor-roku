@@ -14,5 +14,10 @@ function FeaturevisorEvaluationReason() as Object
     REQUIRED: "required",
     RULE: "rule",
     STICKY: "sticky",
+    VARIABLE_DISABLED: "variable_disabled",
+    VARIABLE_NOT_FOUND: "variable_not_found",
+    VARIABLE_OVERRIDE_RULE: "variable_override_rule",
+    VARIABLE_OVERRIDE_VARIATION: "variable_override_variation",
+    VARIATION_DISABLED: "variation_disabled",
   }
 end function

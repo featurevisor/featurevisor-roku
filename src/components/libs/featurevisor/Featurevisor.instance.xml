@@ -14,6 +14,8 @@
     <function name="evaluateFlag" />
     <function name="evaluateVariable" />
     <function name="evaluateVariation" />
+    <function name="getAllEvaluations" />
+    <function name="getContext" />
     <function name="getFeature" />
     <function name="getRevision" />
     <function name="getVariable" />
@@ -28,7 +30,9 @@
     <function name="initialize" />
     <function name="isEnabled" />
     <function name="refresh" />
+    <function name="setContext" />
     <function name="setDatafile" />
+    <function name="setSticky" />
     <function name="setStickyFeatures" />
     <function name="startRefreshing" />
     <function name="stopRefreshing" />

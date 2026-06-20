@@ -1161,6 +1161,324 @@ function TestSuite__FeaturevisorInstance() as Object
     ]
   end function)
 
+  ' F7: percentage=0 rule must disable feature immediately (A1)
+  it("should be disabled when matched traffic has percentage=0", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 0,
+              allocation: [],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return expect(isEnabled("test", { userId: "123" })).toBeFalse()
+  end function)
+
+  ' F7: matchedTraffic.variation is used for variable evaluation (A2)
+  it("should use traffic rule variation override for variable evaluation", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: [
+            { key: "color", type: "string", defaultValue: "red" },
+          ],
+          variations: [
+            { value: "control" },
+            {
+              value: "treatment",
+              variables: [{ key: "color", value: "blue" }],
+            },
+          ],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              variation: "treatment",
+              allocation: [
+                { variation: "control", range: [0, 100000] },
+              ],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return [
+      expect(getVariation("test", { userId: "user-a" })).toBe("treatment"),
+      expect(getVariable("test", "color", { userId: "user-a" })).toBe("blue"),
+    ]
+  end function)
+
+  ' F7: empty allocation array should not crash evaluation (A3)
+  it("should handle empty allocation array gracefully", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return expect(isEnabled("test", { userId: "123" })).toBeTrue()
+  end function)
+
+  ' F8: disabledVariationValue returned when feature is disabled (C3)
+  it("should return disabledVariationValue when feature is disabled", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          disabledVariationValue: "control",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return expect(getVariation("test", { userId: "123" })).toBe("control")
+  end function)
+
+  ' F8: disabledValue on variable schema returned when feature is disabled (C4)
+  it("should return disabledValue from variable schema when feature is disabled", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: [
+            { key: "color", type: "string", defaultValue: "red", disabledValue: "grey" },
+          ],
+          traffic: [],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return expect(getVariable("test", "color", { userId: "123" })).toBe("grey")
+  end function)
+
+  ' F8: useDefaultWhenDisabled on variable schema (C4)
+  it("should return defaultValue when useDefaultWhenDisabled is true and feature is disabled", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: [
+            { key: "color", type: "string", defaultValue: "red", useDefaultWhenDisabled: true },
+          ],
+          traffic: [],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return expect(getVariable("test", "color", { userId: "123" })).toBe("red")
+  end function)
+
+  ' F8: variablesSchema as dict (D1, schemaVersion 2)
+  it("should resolve variable from variablesSchema dict in v2 datafile", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        test: {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: {
+            color: { key: "color", type: "string", defaultValue: "red" },
+          },
+          variations: [
+            { value: "control" },
+            {
+              value: "treatment",
+              variableOverrides: {
+                color: [{ value: "blue" }],
+              },
+            },
+          ],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 0] },
+                { variation: "treatment", range: [0, 100000] },
+              ],
+            },
+          ],
+        },
+      },
+      attributes: [],
+      segments: {},
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return expect(getVariable("test", "color", { userId: "user-a" })).toBe("blue")
+  end function)
+
+  ' v2 variation.variables as object {variableKey: value}
+  it("should resolve variable from v2 variation.variables object format", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        test: {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: {
+            color: { type: "string", defaultValue: "red" },
+          },
+          variations: [
+            { value: "control" },
+            {
+              value: "treatment",
+              variables: { color: "blue" },
+            },
+          ],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 0] },
+                { variation: "treatment", range: [0, 100000] },
+              ],
+            },
+          ],
+        },
+      },
+      attributes: [],
+      segments: {},
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return [
+      expect(getVariable("test", "color", { userId: "user-a" })).toBe("blue"),
+      expect(getVariable("test", "color", { userId: "control-user" })).toBe("red"),
+    ]
+  end function)
+
+  ' VARIABLE_NOT_FOUND reason for unknown variable key
+  it("should return variable_not_found reason for unknown variable key", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: [
+            { key: "color", type: "string", defaultValue: "red" },
+          ],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+    evaluation = evaluateVariable("test", "nonExisting", { userId: "123" })
+
+    ' Then
+    return expect(evaluation.reason).toBe("variable_not_found")
+  end function)
+
   return ts
 end function
 

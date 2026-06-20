@@ -217,6 +217,31 @@ function FeaturevisorSDK() as Object
     m._featurevisorInstance.callFunc("setDatafile", datafile)
   end sub
 
+  prototype.getAllEvaluations = function (context = {} as Object, featureKeys = [] as Object) as Object
+    if (m._featurevisorInstance = Invalid) then return {}
+
+    return m._featurevisorInstance.callFunc("getAllEvaluations", context, featureKeys)
+  end function
+
+  prototype.getContext = function (context = {} as Object) as Object
+    if (m._featurevisorInstance = Invalid) then return {}
+
+    return m._featurevisorInstance.callFunc("getContext", context)
+  end function
+
+  prototype.setContext = sub (context as Object, replace = false as Boolean)
+    if (m._featurevisorInstance = Invalid) then return
+
+    m._featurevisorInstance.callFunc("setContext", context, replace)
+  end sub
+
+  prototype.setSticky = sub (stickyFeatures as Object, replace = false as Boolean)
+    if (m._featurevisorInstance = Invalid) then return
+
+    m._featurevisorInstance.callFunc("setSticky", stickyFeatures, replace)
+  end sub
+
+  ' @deprecated Use setSticky instead
   prototype.setStickyFeatures = sub (stickyFeatures as Object)
     if (m._featurevisorInstance = Invalid) then return
 

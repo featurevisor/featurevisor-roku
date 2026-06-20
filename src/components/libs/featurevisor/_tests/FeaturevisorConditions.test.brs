@@ -131,6 +131,42 @@ function TestSuite__FeaturevisorConditions() as Object
       match: { date: "2023-05-14T00:00:00Z" },
       notMatch: { date: "2023-05-12T00:00:00Z" },
     },
+    {
+      conditions: [{ attribute: "tags", operator: "includes", value: "premium" }],
+      operator: "includes",
+      match: { tags: ["basic", "premium"] },
+      notMatch: { tags: ["basic", "free"] },
+    },
+    {
+      conditions: [{ attribute: "tags", operator: "notIncludes", value: "blocked" }],
+      operator: "notIncludes",
+      match: { tags: ["basic", "premium"] },
+      notMatch: { tags: ["basic", "blocked"] },
+    },
+    {
+      conditions: [{ attribute: "browser_type", operator: "exists" }],
+      operator: "exists",
+      match: { browser_type: "chrome" },
+      notMatch: {},
+    },
+    {
+      conditions: [{ attribute: "browser_type", operator: "notExists" }],
+      operator: "notExists",
+      match: {},
+      notMatch: { browser_type: "chrome" },
+    },
+    {
+      conditions: [{ attribute: "browser_type", operator: "matches", value: "^chrom" }],
+      operator: "matches",
+      match: { browser_type: "chrome" },
+      notMatch: { browser_type: "firefox" },
+    },
+    {
+      conditions: [{ attribute: "browser_type", operator: "notMatches", value: "^fire" }],
+      operator: "notMatches",
+      match: { browser_type: "chrome" },
+      notMatch: { browser_type: "firefox" },
+    },
   ]
 
   itEach(testCases, "should match for ${operator}", function (_ts as Object, params as Object) as String
