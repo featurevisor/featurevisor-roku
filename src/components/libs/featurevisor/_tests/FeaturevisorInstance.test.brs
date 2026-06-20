@@ -1636,6 +1636,7 @@ function TestSuite__FeaturevisorInstance() as Object
 
     ' Then
     m.top.unobserveFieldScoped("datafileChange")
+
     return [
       expect(m.__datafileChangedPayload).toBeValid(),
       expect(m.__datafileChangedPayload.revision).toBe("2.0"),
@@ -1653,6 +1654,7 @@ function TestSuite__FeaturevisorInstance() as Object
 
     ' Then
     m.top.unobserveFieldScoped("contextChange")
+
     return [
       expect(m.__contextChangedPayload).toBeValid(),
       expect(m.__contextChangedPayload.context.userId).toBe("abc"),
@@ -1670,6 +1672,7 @@ function TestSuite__FeaturevisorInstance() as Object
 
     ' Then
     m.top.unobserveFieldScoped("stickyChange")
+
     return expect(m.__stickyChangedPayload).toBeValid()
   end function)
 
@@ -1700,11 +1703,13 @@ function TestSuite__FeaturevisorInstance() as Object
       before: function (options as Object) as Object
         m.__beforeCalled = true
         m.__beforeFeatureKey = options.featureKey
+
         return options
       end function,
       after: function (evaluation as Object, _options as Object) as Object
         m.__afterCalled = true
         m.__afterReason = evaluation.reason
+
         return evaluation
       end function,
     })
@@ -1731,9 +1736,10 @@ function TestSuite__FeaturevisorInstance() as Object
     ' Verify only one hook registered by checking the count via evaluating (hook fires once)
     m.__hookFiredCount = 0
     addHook({ name: "countHook", before: function (options as Object) as Object
-      m.__hookFiredCount += 1
-      return options
-    end function })
+        m.__hookFiredCount += 1
+
+        return options
+      end function })
 
     isEnabled("anything", {})
 

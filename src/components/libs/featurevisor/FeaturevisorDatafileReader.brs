@@ -85,6 +85,7 @@ function FeaturevisorDatafileReader(datafile as Object) as Object
       for each key in feature.variablesSchema
         keys.push(key)
       end for
+
       return keys
     else if (getType(feature.variablesSchema) = "roArray")
       return m._arrayUtils.map(feature.variablesSchema, function (schema as Object, _context as Object) as String

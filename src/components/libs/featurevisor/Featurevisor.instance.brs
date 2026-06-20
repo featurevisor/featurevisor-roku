@@ -979,11 +979,13 @@ end function
 sub refresh()
   if (m._statuses.refreshInProgress)
     m._logger.warn("refresh already in progress, skipping")
+
     return
   end if
 
   if (m._datafileUrl = Invalid OR m._datafileUrl = "")
     m._logger.warn("cannot refresh since `datafileUrl` is not provided")
+
     return
   end if
 
@@ -1271,6 +1273,7 @@ function _applyBeforeHooks(featureKey as String, context as Object) as Object
       evaluateOptions = functionCall(hook.before, [evaluateOptions], evaluateOptions)
     end if
   end for
+
   return evaluateOptions
 end function
 
@@ -1280,6 +1283,7 @@ function _applyAfterHooks(result as Object, evaluateOptions as Object) as Object
       result = functionCall(hook.after, [result, evaluateOptions], result)
     end if
   end for
+
   return result
 end function
 
@@ -1293,6 +1297,7 @@ function _mergeSticky(base as Object, overrides as Object) as Object
   for each key in overrides
     merged[key] = overrides[key]
   end for
+
   return merged
 end function
 
