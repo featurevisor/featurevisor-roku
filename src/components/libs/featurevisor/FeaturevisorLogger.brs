@@ -1,9 +1,12 @@
+' @import /components/ArrayUtils.brs from @dazn/kopytko-utils
 ' @import /components/getType.brs from @dazn/kopytko-utils
 
 function FeaturevisorLogger(options = {} as Object) as Object
   prototype = {}
 
   prototype._LEVELS = ["fatal", "error", "warn", "info", "debug"]
+
+  prototype._arrayUtils = ArrayUtils()
   prototype._level = "info"
   prototype._handler = Invalid
 
@@ -24,8 +27,8 @@ function FeaturevisorLogger(options = {} as Object) as Object
   end sub
 
   prototype.log = sub (level as String, message as String, details = {} as Object)
-    levelIndex = m._LEVELS.indexOf(m._level)
-    msgLevelIndex = m._LEVELS.indexOf(level)
+    levelIndex = m._arrayUtils.findIndex(m._LEVELS, m._level)
+    msgLevelIndex =  m._arrayUtils.findIndex(m._LEVELS, level)
 
     if (levelIndex < 0 OR msgLevelIndex < 0) then return
     if (msgLevelIndex > levelIndex) then return
