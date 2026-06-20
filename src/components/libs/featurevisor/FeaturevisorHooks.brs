@@ -1,5 +1,4 @@
 ' @import /components/ArrayUtils.brs from @dazn/kopytko-utils
-' @import /components/getType.brs from @dazn/kopytko-utils
 
 function FeaturevisorHooks() as Object
   prototype = {}
