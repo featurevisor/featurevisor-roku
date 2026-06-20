@@ -140,9 +140,9 @@ function TestSuite__FeaturevisorDatafileReader() as Object
 
     ' Then
     return [
-      expect(keys.count()).toBe(2),
-      expect(keys.doesExist("featureA")).toBeTrue(),
-      expect(keys.doesExist("featureB")).toBeTrue(),
+      expect(keys).toHaveLength(2),
+      expect(keys).toContain("featureA"),
+      expect(keys).toContain("featureB"),
     ]
   end function)
 
@@ -169,8 +169,8 @@ function TestSuite__FeaturevisorDatafileReader() as Object
     return [
       expect(reader.getFeature("featureA")).toEqual(v1Datafile.features[0]),
       expect(reader.getSegment("segA")).toEqual(v1Datafile.segments[0]),
-      expect(keys.count()).toBe(1),
-      expect(keys.doesExist("featureA")).toBeTrue(),
+      expect(keys).toHaveLength(1),
+      expect(keys).toContain("featureA"),
     ]
   end function)
 

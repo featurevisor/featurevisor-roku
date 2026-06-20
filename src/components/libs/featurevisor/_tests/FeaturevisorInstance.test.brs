@@ -1417,6 +1417,13 @@ function TestSuite__FeaturevisorInstance() as Object
               variables: { color: "blue" },
             },
           ],
+          force: [
+            {
+              conditions: [{ attribute:"userId",operator:"equals",value:"control-user" }],
+              enabled: true,
+              variation: "control",
+            },
+          ],
           traffic: [
             {
               key: "1",
