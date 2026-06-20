@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.3...v1.1.4) (2026-06-20)
+
+
+### Bug Fixes
+
+* add formatter and linter ([#8](https://github.com/featurevisor/featurevisor-roku/issues/8)) ([b844943](https://github.com/featurevisor/featurevisor-roku/commit/b844943d03254e49bcd0832d7b29792a6229db92))
+
 ## [1.1.3](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.2...v1.1.3) (2025-06-27)
 
 
