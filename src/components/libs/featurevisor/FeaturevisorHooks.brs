@@ -1,23 +1,16 @@
-' @import /components/ArrayUtils.brs from @dazn/kopytko-utils
-
 function FeaturevisorHooks() as Object
   prototype = {}
 
-  prototype._hooks = []
-  prototype._arrayUtils = ArrayUtils()
+  prototype._hooks = {}
 
   prototype.add = sub (hook as Object)
-    for each existing in m._hooks
-      if (existing.name = hook.name) then return
-    end for
+    if (m._hooks.doesExist(hook.name)) then return
 
-    m._hooks.push(hook)
+    m._hooks[hook.name] = hook
   end sub
 
   prototype.remove = sub (name as String)
-    m._hooks = m._arrayUtils.filter(m._hooks, function (hook as Object, context as Object) as Boolean
-      return hook.name <> context.name
-    end function, { name: name })
+    m._hooks.delete(name)
   end sub
 
   prototype.getAll = function () as Object

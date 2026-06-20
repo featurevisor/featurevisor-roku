@@ -1,4 +1,5 @@
 ' @import /components/ArrayUtils.brs from @dazn/kopytko-utils
+' @import /components/getProperty.brs from @dazn/kopytko-utils
 ' @import /components/getType.brs from @dazn/kopytko-utils
 ' @import /components/libs/compareVersions.brs from compare-versions-roku
 
@@ -51,23 +52,23 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
     return false
   end function
 
-  functionScope._getValueFromContext = function (context as Object, path as String) as Dynamic
-    if (path.instr(0, ".") = -1) then return context[path]
+  functionScope._attributeExistsInContext = function (context as Object, path as String) as Boolean
+    if (path.instr(0, ".") = -1) then return context.doesExist(path)
 
     parts = path.split(".")
-    current = context
-    for each part in parts
-      if (current = Invalid OR getType(current) <> "roAssociativeArray") then return Invalid
-      current = current[part]
-    end for
+    lastKey = parts.pop()
+    parent = getProperty(context, parts)
 
-    return current
+    if (parent = Invalid OR getType(parent) <> "roAssociativeArray") then return false
+
+    return parent.doesExist(lastKey)
   end function
 
   functionScope._conditionIsMatched = function (condition as Object, context as Object) as Boolean
     if (condition = Invalid) then return true
     if (condition.doesExist("operator") AND condition.doesExist("attribute") AND condition.doesExist("value"))
-      attributeValue = m._getValueFromContext(context, condition.attribute)
+      attributeValue = getProperty(context, condition.attribute)
+
       if (condition["operator"] = "before" OR condition["operator"] = "after")
         if (getType(attributeValue) = "roString")
           dateInContext = m._toDateTime(attributeValue)
@@ -86,7 +87,7 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
         end if
 
         return dateInContext.asSeconds() > dateInCondition.asSeconds()
-      else if (getType(condition.value) = "roArray" AND (attributeValue = Invalid OR getType(attributeValue) = "roString" OR m._isNumber(attributeValue)))
+      else if (getType(condition.value) = "roArray" AND m._attributeExistsInContext(context, condition.attribute) AND (attributeValue = Invalid OR getType(attributeValue) = "roString" OR m._isNumber(attributeValue)))
         if (condition["operator"] = "in")
           return m._arrayUtils.contains(condition.value, function (item as String, context as Object) as Boolean
             return context.compareValue <> Invalid AND item.toStr() = context.compareValue.toStr()
@@ -172,7 +173,8 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
         end if
       end if
     else if (condition.doesExist("operator") AND condition.doesExist("attribute"))
-      attributeValue = m._getValueFromContext(context, condition.attribute)
+      attributeValue = getProperty(context, condition.attribute)
+
       if (condition["operator"] = "exists")
         return attributeValue <> Invalid
       else if (condition["operator"] = "notExists")

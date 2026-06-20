@@ -1676,76 +1676,79 @@ function TestSuite__FeaturevisorInstance() as Object
     return expect(m.__stickyChangedPayload).toBeValid()
   end function)
 
-  it("should call hooks before and after evaluation", function (_ts as Object) as Object
-    ' Given
-    m.__beforeCalled = false
-    m.__afterCalled = false
-    m.__beforeFeatureKey = ""
-    m.__afterReason = ""
-
-    datafile = {
-      schemaVersion: "1",
-      revision: "1",
-      features: [
-        {
-          key: "test",
-          bucketBy: "userId",
-          traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }],
-        },
-      ],
-      attributes: [],
-      segments: [],
-    }
-    initialize({ datafile: datafile })
+  it("should apply before hook (no context) to modify featureKey", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
 
     addHook({
-      name: "testHook",
+      name: "redirectHook",
       before: function (options as Object) as Object
-        m.__beforeCalled = true
-        m.__beforeFeatureKey = options.featureKey
+        options.featureKey = "redirectedByHook"
 
         return options
       end function,
+    })
+
+    return expect(evaluateFlag("originalKey", {}).featureKey).toBe("redirectedByHook")
+  end function)
+
+  it("should apply before hook (with context) so m inside the hook is that context", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    hookContext = { redirectTarget: "fromContext" }
+
+    addHook({
+      name: "contextHook",
+      context: hookContext,
+      before: function (options as Object) as Object
+        options.featureKey = m.redirectTarget
+
+        return options
+      end function,
+    })
+
+    return expect(evaluateFlag("originalKey", {}).featureKey).toBe("fromContext")
+  end function)
+
+  it("should apply after hook (no context) to modify evaluation result", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    addHook({
+      name: "overrideHook",
       after: function (evaluation as Object, _options as Object) as Object
-        m.__afterCalled = true
-        m.__afterReason = evaluation.reason
+        evaluation.reason = "overridden_by_hook"
 
         return evaluation
       end function,
     })
 
-    ' When
-    isEnabled("test", { userId: "123" })
-
-    ' Then
-    return [
-      expect(m.__beforeCalled).toBeTrue(),
-      expect(m.__afterCalled).toBeTrue(),
-      expect(m.__beforeFeatureKey).toBe("test"),
-      expect(m.__afterReason).toBe("rule"),
-    ]
+    return expect(evaluateFlag("anyKey", {}).reason).toBe("overridden_by_hook")
   end function)
 
-  it("should reject duplicate hook names", function (_ts as Object) as Object
-    ' Given
+  it("should apply after hook (with context) so m inside the hook is that context", function (_ts as Object) as String
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    hookContext = { customReason: "from_context_after" }
+
+    addHook({
+      name: "contextAfterHook",
+      context: hookContext,
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.reason = m.customReason
+
+        return evaluation
+      end function,
+    })
+
+    return expect(evaluateFlag("anyKey", {}).reason).toBe("from_context_after")
+  end function)
+
+  it("should reject duplicate hook names", function (_ts as Object) as String
     initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
 
     addHook({ name: "myHook", before: function (options as Object) as Object : return options : end function })
     addHook({ name: "myHook", before: function (options as Object) as Object : return options : end function })
 
-    ' Verify only one hook registered by checking the count via evaluating (hook fires once)
-    m.__hookFiredCount = 0
-    addHook({ name: "countHook", before: function (options as Object) as Object
-        m.__hookFiredCount += 1
-
-        return options
-      end function })
-
-    isEnabled("anything", {})
-
-    ' 2 hooks: myHook (registered once) + countHook
-    ' myHook fires once, countHook fires once
-    return expect(m.__hookFiredCount).toBe(1)
+    return expect(m._hooksManager.getAll().count()).toBe(1)
   end function)
 
   it("should apply OverrideOptions sticky per call", function (_ts as Object) as Object

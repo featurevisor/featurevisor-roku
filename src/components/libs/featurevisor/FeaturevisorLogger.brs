@@ -28,7 +28,7 @@ function FeaturevisorLogger(options = {} as Object) as Object
 
   prototype.log = sub (level as String, message as String, details = {} as Object)
     levelIndex = m._arrayUtils.findIndex(m._LEVELS, m._level)
-    msgLevelIndex =  m._arrayUtils.findIndex(m._LEVELS, level)
+    msgLevelIndex = m._arrayUtils.findIndex(m._LEVELS, level)
 
     if (levelIndex < 0 OR msgLevelIndex < 0) then return
     if (msgLevelIndex > levelIndex) then return

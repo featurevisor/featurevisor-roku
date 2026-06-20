@@ -1266,22 +1266,50 @@ function _getValueByType(value as Dynamic, fieldType as String) as Dynamic
   end try
 end function
 
+function _callHook(hook as Object, key as String, arg1 = Invalid as Dynamic, arg2 = Invalid as Dynamic) as Dynamic
+  func = hook[key]
+
+  if (func = Invalid OR getType(func) <> "roFunction") then return Invalid
+
+  if (hook.context <> Invalid)
+    hook.context["$$hook"] = func
+    if (arg2 <> Invalid)
+      result = hook.context["$$hook"](arg1, arg2)
+    else
+      result = hook.context["$$hook"](arg1)
+    end if
+    hook.context.delete("$$hook")
+  else
+    m["$$hook"] = func
+    if (arg2 <> Invalid)
+      result = m["$$hook"](arg1, arg2)
+    else
+      result = m["$$hook"](arg1)
+    end if
+    m.delete("$$hook")
+  end if
+
+  return result
+end function
+
 function _applyBeforeHooks(featureKey as String, context as Object) as Object
   evaluateOptions = { featureKey: featureKey, context: context }
-  for each hook in m._hooksManager.getAll()
-    if (hook.doesExist("before") AND getType(hook.before) = "roFunction")
-      evaluateOptions = functionCall(hook.before, [evaluateOptions], evaluateOptions)
-    end if
+  hooks = m._hooksManager.getAll()
+
+  for each hookName in hooks
+    result = _callHook(hooks[hookName], "before", evaluateOptions)
+    if (result <> Invalid) then evaluateOptions = result
   end for
 
   return evaluateOptions
 end function
 
 function _applyAfterHooks(result as Object, evaluateOptions as Object) as Object
-  for each hook in m._hooksManager.getAll()
-    if (hook.doesExist("after") AND getType(hook.after) = "roFunction")
-      result = functionCall(hook.after, [result, evaluateOptions], result)
-    end if
+  hooks = m._hooksManager.getAll()
+
+  for each hookName in hooks
+    updated = _callHook(hooks[hookName], "after", result, evaluateOptions)
+    if (updated <> Invalid) then result = updated
   end for
 
   return result
@@ -1305,11 +1333,11 @@ function _getBucketValue(feature as Object, finalContext as Object) as Integer
   bucketKey = _getBucketKey(feature, finalContext)
   bucketValue = featurevisorGetBucketedNumber(bucketKey)
   bucketValue = _configureBucketValue(feature, finalContext, bucketValue)
+  hooks = m._hooksManager.getAll()
 
-  for each hook in m._hooksManager.getAll()
-    if (hook.doesExist("bucketValue") AND getType(hook.bucketValue) = "roFunction")
-      bucketValue = functionCall(hook.bucketValue, [{ feature: feature, context: finalContext, bucketValue: bucketValue }], bucketValue)
-    end if
+  for each hookName in hooks
+    updated = _callHook(hooks[hookName], "bucketValue", { feature: feature, context: finalContext, bucketValue: bucketValue })
+    if (updated <> Invalid) then bucketValue = updated
   end for
 
   return bucketValue
@@ -1355,11 +1383,11 @@ function _getBucketKey(feature as Object, context as Object) as String
   bucketKey.push(featureKey)
 
   bucketKeyResult = _configureBucketKey(feature, context, bucketKey.join(m._bucketKeySeparator))
+  hooks = m._hooksManager.getAll()
 
-  for each hook in m._hooksManager.getAll()
-    if (hook.doesExist("bucketKey") AND getType(hook.bucketKey) = "roFunction")
-      bucketKeyResult = functionCall(hook.bucketKey, [{ feature: feature, context: context, bucketKey: bucketKeyResult }], bucketKeyResult)
-    end if
+  for each hookName in hooks
+    updated = _callHook(hooks[hookName], "bucketKey", { feature: feature, context: context, bucketKey: bucketKeyResult })
+    if (updated <> Invalid) then bucketKeyResult = updated
   end for
 
   return bucketKeyResult
