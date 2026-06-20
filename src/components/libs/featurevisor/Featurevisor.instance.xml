@@ -4,13 +4,18 @@
   <interface>
     <!-- Events -->
     <field id="activated" type="assocarray" alwaysNotify="true" value="{}" />
+    <field id="contextChange" type="assocarray" alwaysNotify="true" value="{}" />
+    <field id="datafileChange" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="ready" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="refreshed" type="assocarray" alwaysNotify="true" value="{}" />
+    <field id="stickyChange" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="updated" type="assocarray" alwaysNotify="true" value="{}" />
 
     <!-- Functions -->
     <function name="activate" />
+    <function name="addHook" />
     <function name="clear" />
+    <function name="close" />
     <function name="evaluateFlag" />
     <function name="evaluateVariable" />
     <function name="evaluateVariation" />
@@ -32,6 +37,7 @@
     <function name="refresh" />
     <function name="setContext" />
     <function name="setDatafile" />
+    <function name="setLogLevel" />
     <function name="setSticky" />
     <function name="setStickyFeatures" />
     <function name="startRefreshing" />

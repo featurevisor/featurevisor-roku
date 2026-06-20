@@ -66,8 +66,9 @@ These features exist in the Roku SDK but were removed from JS SDK v2. Keep them 
 | `refresh()` manual refresh | Caller-driven refresh on app resume |
 | `onReady` / `onRefresh` / `onUpdate` callbacks (SGNode events `ready` / `refreshed` / `updated`) | Roku event model uses field observers, not Promises |
 | `activate()` method | Experiment activation tracking is useful for analytics |
-| `interceptContext` / `configureBucketKey` / `configureBucketValue` callbacks | Needed until hooks system is implemented |
+| `interceptContext` / `configureBucketKey` / `configureBucketValue` callbacks | Legacy callbacks kept alongside the new hooks system for backward compat |
 | `initialFeatures` option | Before datafile loads, return known defaults |
+| `spawn()` / child instances | No concrete Roku use case; deferred — requires OverrideOptions per-call sticky to be useful |
 
 ---
 
@@ -77,6 +78,7 @@ These features exist in the Roku SDK but were removed from JS SDK v2. Keep them 
 |------|---------------|
 | `FeaturevisorSDK.brs` | Public API factory — thin wrapper over the SGNode instance |
 | `Featurevisor.instance.brs` | Core evaluation engine (`evaluateFlag`, `evaluateVariation`, `evaluateVariable`, context, sticky, bucketing) |
+| `FeaturevisorHooks.brs` | Hooks manager — `add`, `remove`, `getAll` for `before`/`after`/`bucketKey`/`bucketValue` hooks |
 | `Featurevisor.instance.xml` | SGNode definition (fields: `ready`, `activated`, `refreshed`, `updated`) |
 | `Featurevisor.request.brs` | HTTP task for datafile fetch (uses createRequest) |
 | `FeaturevisorDatafileReader.brs` | Datafile accessor — handles both v1 (array) and v2 (dict) for features/segments |

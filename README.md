@@ -103,6 +103,7 @@ Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sd
   - [`f.startRefreshing`](#fstartrefreshing)
   - [`f.stopRefreshing`](#fstoprefreshing)
 - [Evaluation object](#evaluation-object)
+- [Differences from the JS SDK](#differences-from-the-js-sdk)
 
 ## Installation
 
@@ -737,17 +738,33 @@ The `evaluateFlag`, `evaluateVariation`, and `evaluateVariable` methods return a
 | `"initial"`                  | Instance not yet ready; using `initialFeatures` value              |
 | `"no_match"`                 | No traffic rule matched                                            |
 | `"no_variations"`            | Feature has no variations defined                                  |
-| `"not_found"`                | Feature not found in the datafile                                  |
+| `"feature_not_found"`        | Feature not found in the datafile                                  |
 | `"variable_not_found"`       | Variable key not found in the feature's schema                     |
 | `"out_of_range"`             | Feature is in a mutually-exclusive group but bucket is out of range|
 | `"override"`                 | Variable overridden by a condition inside a variation (v1 format)  |
 | `"required"`                 | A required feature is not enabled                                  |
 | `"rule"`                     | Matched a traffic rule                                             |
 | `"sticky"`                   | Using a sticky feature override                                    |
+| `"variable_default"`         | Variable falls back to its `defaultValue`                          |
 | `"variable_disabled"`        | Feature is disabled; variable `disabledValue` is returned          |
 | `"variable_override_rule"`   | Variable overridden directly by a traffic rule                     |
 | `"variable_override_variation"` | Variable overridden by a condition inside a variation           |
 | `"variation_disabled"`       | Feature is disabled; `disabledVariationValue` is returned          |
+
+## Differences from the JS SDK
+
+The Roku SDK intentionally diverges from the JavaScript SDK in the following ways:
+
+| Feature | Why |
+|---------|-----|
+| `datafileUrl` + HTTP fetch | Roku apps fetch the datafile themselves; there is no built-in fetch API outside the SDK |
+| `refreshInterval` + `startRefreshing()` / `stopRefreshing()` | TV apps need periodic polling; no background threads available |
+| `refresh()` manual method | Caller-driven refresh on app resume |
+| `onReady` / `onRefresh` / `onUpdate` / `onDatafileChanged` / `onContextChanged` / `onStickyChanged` callbacks | Roku uses SGNode field observers, not Promises or EventEmitter |
+| `activate()` method | Experiment activation tracking for analytics |
+| `interceptContext` / `configureBucketKey` / `configureBucketValue` callbacks | Legacy callback API; kept alongside the hooks system |
+| `initialFeatures` option | Return known defaults before the datafile loads |
+| `spawn()` / child instances | No concrete Roku use case identified; deferred — no equivalent implementation planned |
 
 ## License <!-- omit in toc -->
 

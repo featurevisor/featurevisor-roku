@@ -51,14 +51,28 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
     return false
   end function
 
+  functionScope._getValueFromContext = function (context as Object, path as String) as Dynamic
+    if (path.instr(0, ".") = -1) then return context[path]
+
+    parts = path.split(".")
+    current = context
+    for each part in parts
+      if (current = Invalid OR getType(current) <> "roAssociativeArray") then return Invalid
+      current = current[part]
+    end for
+
+    return current
+  end function
+
   functionScope._conditionIsMatched = function (condition as Object, context as Object) as Boolean
     if (condition = Invalid) then return true
     if (condition.doesExist("operator") AND condition.doesExist("attribute") AND condition.doesExist("value"))
+      attributeValue = m._getValueFromContext(context, condition.attribute)
       if (condition["operator"] = "before" OR condition["operator"] = "after")
-        if (getType(context[condition.attribute]) = "roString")
-          dateInContext = m._toDateTime(context[condition.attribute])
+        if (getType(attributeValue) = "roString")
+          dateInContext = m._toDateTime(attributeValue)
         else
-          dateInContext = context[condition.attribute]
+          dateInContext = attributeValue
         end if
 
         if (getType(condition.value) = "roString")
@@ -72,85 +86,85 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
         end if
 
         return dateInContext.asSeconds() > dateInCondition.asSeconds()
-      else if (getType(condition.value) = "roArray" AND context.doesExist(condition.attribute) AND (context[condition.attribute] = Invalid OR getType(context[condition.attribute]) = "roString" OR m._isNumber(context[condition.attribute])))
+      else if (getType(condition.value) = "roArray" AND (attributeValue = Invalid OR getType(attributeValue) = "roString" OR m._isNumber(attributeValue)))
         if (condition["operator"] = "in")
           return m._arrayUtils.contains(condition.value, function (item as String, context as Object) as Boolean
             return context.compareValue <> Invalid AND item.toStr() = context.compareValue.toStr()
-          end function, { compareValue: context[condition.attribute] })
+          end function, { compareValue: attributeValue })
         else if (condition["operator"] = "notIn")
           return NOT m._arrayUtils.contains(condition.value, function (item as String, context as Object) as Boolean
             return context.compareValue <> Invalid AND item.toStr() = context.compareValue.toStr()
-          end function, { compareValue: context[condition.attribute] })
+          end function, { compareValue: attributeValue })
         end if
-      else if (context.doesExist(condition.attribute) AND getType(context[condition.attribute]) = "roArray")
+      else if (getType(attributeValue) = "roArray")
         if (condition["operator"] = "includes")
-          return m._arrayUtils.contains(context[condition.attribute], function (item as Object, ctx as Object) as Boolean
-            return item.toStr() = ctx.compareValue.toStr()
+          return m._arrayUtils.contains(attributeValue, function (item as Object, context as Object) as Boolean
+            return item.toStr() = context.compareValue.toStr()
           end function, { compareValue: condition.value })
         else if (condition["operator"] = "notIncludes")
-          return NOT m._arrayUtils.contains(context[condition.attribute], function (item as Object, ctx as Object) as Boolean
-            return item.toStr() = ctx.compareValue.toStr()
+          return NOT m._arrayUtils.contains(attributeValue, function (item as Object, context as Object) as Boolean
+            return item.toStr() = context.compareValue.toStr()
           end function, { compareValue: condition.value })
         end if
-      else if (getType(context[condition.attribute]) = "roString" AND getType(condition.value) = "roString")
+      else if (getType(attributeValue) = "roString" AND getType(condition.value) = "roString")
         if (condition["operator"] = "equals")
-          return context[condition.attribute] = condition.value
+          return attributeValue = condition.value
         else if (condition["operator"] = "notEquals")
-          return context[condition.attribute] <> condition.value
+          return attributeValue <> condition.value
         else if (condition["operator"] = "contains")
-          return context[condition.attribute].instr(0, condition.value) <> -1
+          return attributeValue.instr(0, condition.value) <> -1
         else if (condition["operator"] = "notContains")
-          return context[condition.attribute].instr(0, condition.value) = -1
+          return attributeValue.instr(0, condition.value) = -1
         else if (condition["operator"] = "startsWith")
-          return condition.value = context[condition.attribute].left(condition.value.len())
+          return condition.value = attributeValue.left(condition.value.len())
         else if (condition["operator"] = "endsWith")
-          return condition.value = context[condition.attribute].right(condition.value.len())
+          return condition.value = attributeValue.right(condition.value.len())
         else if (condition["operator"] = "semverEquals")
-          return compareVersions(context[condition.attribute], condition.value) = 0
+          return compareVersions(attributeValue, condition.value) = 0
         else if (condition["operator"] = "semverNotEquals")
-          return compareVersions(context[condition.attribute], condition.value) <> 0
+          return compareVersions(attributeValue, condition.value) <> 0
         else if (condition["operator"] = "semverGreaterThan")
-          return compareVersions(context[condition.attribute], condition.value) = 1
+          return compareVersions(attributeValue, condition.value) = 1
         else if (condition["operator"] = "semverGreaterThanOrEquals")
-          return compareVersions(context[condition.attribute], condition.value) >= 0
+          return compareVersions(attributeValue, condition.value) >= 0
         else if (condition["operator"] = "semverLessThan")
-          return compareVersions(context[condition.attribute], condition.value) = -1
+          return compareVersions(attributeValue, condition.value) = -1
         else if (condition["operator"] = "semverLessThanOrEquals")
-          return compareVersions(context[condition.attribute], condition.value) <= 0
+          return compareVersions(attributeValue, condition.value) <= 0
         else if (condition["operator"] = "matches")
           flags = ""
           if (condition.doesExist("regexFlags") AND getType(condition.regexFlags) = "roString") then flags = condition.regexFlags
           regex = CreateObject("roRegex", condition.value, flags)
 
-          return regex.isMatch(context[condition.attribute])
+          return regex.isMatch(attributeValue)
         else if (condition["operator"] = "notMatches")
           flags = ""
           if (condition.doesExist("regexFlags") AND getType(condition.regexFlags) = "roString") then flags = condition.regexFlags
           regex = CreateObject("roRegex", condition.value, flags)
 
-          return NOT regex.isMatch(context[condition.attribute])
+          return NOT regex.isMatch(attributeValue)
         end if
-      else if (m._isNumber(context[condition.attribute]) AND m._isNumber(condition.value))
+      else if (m._isNumber(attributeValue) AND m._isNumber(condition.value))
         if (condition["operator"] = "equals")
-          return context[condition.attribute] = condition.value
+          return attributeValue = condition.value
         else if (condition["operator"] = "notEquals")
-          return context[condition.attribute] <> condition.value
+          return attributeValue <> condition.value
         else if (condition["operator"] = "greaterThan")
-          return context[condition.attribute] > condition.value
+          return attributeValue > condition.value
         else if (condition["operator"] = "greaterThanOrEquals")
-          return context[condition.attribute] >= condition.value
+          return attributeValue >= condition.value
         else if (condition["operator"] = "lessThan")
-          return context[condition.attribute] < condition.value
+          return attributeValue < condition.value
         else if (condition["operator"] = "lessThanOrEquals")
-          return context[condition.attribute] <= condition.value
+          return attributeValue <= condition.value
         end if
-      else if (getType(context[condition.attribute]) = "roBoolean" AND getType(condition.value) = "roBoolean")
+      else if (getType(attributeValue) = "roBoolean" AND getType(condition.value) = "roBoolean")
         if (condition["operator"] = "equals")
-          return context[condition.attribute] = condition.value
+          return attributeValue = condition.value
         else if (condition["operator"] = "notEquals")
-          return context[condition.attribute] <> condition.value
+          return attributeValue <> condition.value
         end if
-      else if (getType(context[condition.attribute]) = "roInvalid" AND getType(condition.value) = "roInvalid")
+      else if (getType(attributeValue) = "roInvalid" AND getType(condition.value) = "roInvalid")
         if (condition["operator"] = "equals")
           return true
         else if (condition["operator"] = "notEquals")
@@ -158,10 +172,11 @@ function featurevisorAllConditionsAreMatched(condition as Object, context as Obj
         end if
       end if
     else if (condition.doesExist("operator") AND condition.doesExist("attribute"))
+      attributeValue = m._getValueFromContext(context, condition.attribute)
       if (condition["operator"] = "exists")
-        return context.doesExist(condition.attribute)
+        return attributeValue <> Invalid
       else if (condition["operator"] = "notExists")
-        return NOT context.doesExist(condition.attribute)
+        return attributeValue = Invalid
       end if
     end if
 

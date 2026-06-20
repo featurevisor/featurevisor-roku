@@ -76,6 +76,32 @@ function FeaturevisorDatafileReader(datafile as Object) as Object
     return keys
   end function
 
+  prototype.getVariableKeys = function (featureKey as String) as Object
+    feature = m.getFeature(featureKey)
+    if (feature = Invalid) then return []
+
+    if (getType(feature.variablesSchema) = "roAssociativeArray")
+      keys = []
+      for each key in feature.variablesSchema
+        keys.push(key)
+      end for
+      return keys
+    else if (getType(feature.variablesSchema) = "roArray")
+      return m._arrayUtils.map(feature.variablesSchema, function (schema as Object, _context as Object) as String
+        return schema.key
+      end function, {})
+    end if
+
+    return []
+  end function
+
+  prototype.hasVariations = function (featureKey as String) as Boolean
+    feature = m.getFeature(featureKey)
+    if (feature = Invalid) then return false
+
+    return feature.variations <> Invalid AND getType(feature.variations) = "roArray" AND feature.variations.count() > 0
+  end function
+
   prototype.getRevision = function () as String
     return m._revision
   end function
