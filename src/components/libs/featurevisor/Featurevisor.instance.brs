@@ -115,8 +115,12 @@ sub clear()
   m._stickyFeatures = Invalid
 end sub
 
-sub addHook(hook as Object)
-  m._hooksManager.add(hook)
+function addHook(hook as Object) as String
+  return m._hooksManager.add(hook)
+end function
+
+sub removeHook(hookName as String)
+  m._hooksManager.remove(hookName)
 end sub
 
 sub close()

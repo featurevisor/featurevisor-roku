@@ -3,11 +3,13 @@ function FeaturevisorHooks() as Object
 
   prototype._hooks = {}
 
-  prototype.add = sub (hook as Object)
-    if (m._hooks.doesExist(hook.name)) then return
+  prototype.add = function (hook as Object) as String
+    if (m._hooks.doesExist(hook.name)) then return ""
 
     m._hooks[hook.name] = hook
-  end sub
+
+    return hook.name
+  end function
 
   prototype.remove = sub (name as String)
     m._hooks.delete(name)

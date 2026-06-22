@@ -1676,79 +1676,526 @@ function TestSuite__FeaturevisorInstance() as Object
     return expect(m.__stickyChangedPayload).toBeValid()
   end function)
 
-  it("should apply before hook (no context) to modify featureKey", function (_ts as Object) as String
-    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+  it("should apply before hook to redirect feature evaluation", function (_ts as Object) as Object
+    ' Given — two features: "original" is disabled, "redirected" is enabled
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "original",
+          bucketBy: "userId",
+          traffic: [],
+        },
+        {
+          key: "redirected",
+          bucketBy: "userId",
+          traffic: [
+            { key: "1", segments: "*", percentage: 100000, allocation: [] },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
 
+    ' When — hook redirects "original" → "redirected"
     addHook({
       name: "redirectHook",
       before: function (options as Object) as Object
-        options.featureKey = "redirectedByHook"
+        if (options.featureKey = "original")
+          options.featureKey = "redirected"
+        end if
 
         return options
       end function,
     })
 
-    return expect(evaluateFlag("originalKey", {}).featureKey).toBe("redirectedByHook")
+    ' Then — calling isEnabled("original") actually evaluates "redirected" which is enabled
+    return [
+      expect(isEnabled("original", { userId: "user-1" })).toBeTrue(),
+      expect(isEnabled("redirected", { userId: "user-1" })).toBeTrue(),
+    ]
   end function)
 
-  it("should apply before hook (with context) so m inside the hook is that context", function (_ts as Object) as String
-    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+  it("should apply before hook with context so m inside the hook is that context", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        { key: "featureA", bucketBy: "userId", traffic: [] },
+        {
+          key: "featureB",
+          bucketBy: "userId",
+          traffic: [
+            { key: "1", segments: "*", percentage: 100000, allocation: [] },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
 
-    hookContext = { redirectTarget: "fromContext" }
+    hookContext = { targetFeature: "featureB" }
 
     addHook({
-      name: "contextHook",
+      name: "contextRedirectHook",
       context: hookContext,
       before: function (options as Object) as Object
-        options.featureKey = m.redirectTarget
+        options.featureKey = m.targetFeature
 
         return options
       end function,
     })
 
-    return expect(evaluateFlag("originalKey", {}).featureKey).toBe("fromContext")
+    ' Then — "featureA" is redirected to "featureB" (enabled) via hook context
+    return expect(isEnabled("featureA", { userId: "user-1" })).toBeTrue()
   end function)
 
-  it("should apply after hook (no context) to modify evaluation result", function (_ts as Object) as String
-    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+  it("should apply after hook to override evaluation result", function (_ts as Object) as Object
+    ' Given — feature exists and is enabled
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            { key: "1", segments: "*", percentage: 100000, allocation: [] },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
 
+    ' When — after hook forces the feature to disabled
     addHook({
-      name: "overrideHook",
+      name: "disableHook",
       after: function (evaluation as Object, _options as Object) as Object
-        evaluation.reason = "overridden_by_hook"
+        evaluation.enabled = false
 
         return evaluation
       end function,
     })
 
-    return expect(evaluateFlag("anyKey", {}).reason).toBe("overridden_by_hook")
+    ' Then — even though traffic matches, the after hook overrides to disabled
+    return [
+      expect(isEnabled("test", { userId: "user-1" })).toBeFalse(),
+      expect(evaluateFlag("test", { userId: "user-1" }).enabled).toBeFalse(),
+    ]
   end function)
 
-  it("should apply after hook (with context) so m inside the hook is that context", function (_ts as Object) as String
-    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+  it("should apply after hook with context so m inside the hook is that context", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [{ variation: "control", range: [0, 100000] }],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
 
-    hookContext = { customReason: "from_context_after" }
+    hookContext = { forcedVariation: "treatment" }
 
     addHook({
-      name: "contextAfterHook",
+      name: "forceVariationHook",
       context: hookContext,
       after: function (evaluation as Object, _options as Object) as Object
-        evaluation.reason = m.customReason
+        evaluation.variationValue = m.forcedVariation
 
         return evaluation
       end function,
     })
 
-    return expect(evaluateFlag("anyKey", {}).reason).toBe("from_context_after")
+    ' Then — after hook forces variation to "treatment" even though allocation gives "control"
+    return expect(getVariation("test", { userId: "user-1" })).toBe("treatment")
   end function)
 
-  it("should reject duplicate hook names", function (_ts as Object) as String
-    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+  it("should apply bucketKey hook to modify bucketing", function (_ts as Object) as Object
+    ' Given — feature with two variations split 50/50
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 50000] },
+                { variation: "treatment", range: [50000, 100000] },
+              ],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
 
-    addHook({ name: "myHook", before: function (options as Object) as Object : return options : end function })
-    addHook({ name: "myHook", before: function (options as Object) as Object : return options : end function })
+    ' When — hook forces a completely different bucket key, changing the hash
+    addHook({
+      name: "bucketKeyHook",
+      bucketKey: function (_options as Object) as String
+        return "forced-bucket-key.test"
+      end function,
+    })
 
-    return expect(m._hooksManager.getAll().count()).toBe(1)
+    ' Then — both calls with different userIds produce the same variation
+    ' because the bucket key is now fixed
+    variationA = getVariation("test", { userId: "user-abc" })
+    variationB = getVariation("test", { userId: "completely-different-user" })
+
+    return expect(variationA).toBe(variationB)
+  end function)
+
+  it("should apply bucketValue hook to force allocation", function (_ts as Object) as Object
+    ' Given — feature with control [0, 50000] and treatment [50000, 100000]
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 50000] },
+                { variation: "treatment", range: [50000, 100000] },
+              ],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' When — hook forces bucket value to 1 (always in "control" range)
+    addHook({
+      name: "forceBucketValueHook",
+      bucketValue: function (_options as Object) as Integer
+        return 1
+      end function,
+    })
+
+    ' Then — regardless of userId, always lands in "control"
+    return [
+      expect(getVariation("test", { userId: "user-1" })).toBe("control"),
+      expect(getVariation("test", { userId: "user-2" })).toBe("control"),
+      expect(getVariation("test", { userId: "user-999" })).toBe("control"),
+    ]
+  end function)
+
+  ' ===== DUPLICATE HOOK REJECTION =====
+
+  it("should silently reject duplicate hook names", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            { key: "1", segments: "*", percentage: 100000, allocation: [] },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' When — first hook disables, second hook (same name) would enable
+    addHook({
+      name: "myHook",
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.enabled = false
+
+        return evaluation
+      end function,
+    })
+
+    addHook({
+      name: "myHook",
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.enabled = true
+
+        return evaluation
+      end function,
+    })
+
+    ' Then — only the first hook is registered (disables the feature)
+    return expect(isEnabled("test", { userId: "user-1" })).toBeFalse()
+  end function)
+
+  ' ===== HOOKS VIA OPTIONS =====
+
+  it("should register hooks passed via initialize options", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            { key: "1", segments: "*", percentage: 100000, allocation: [] },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When — hook passed at init time
+    initialize({
+      datafile: datafile,
+      hooks: [
+        {
+          name: "initHook",
+          after: function (evaluation as Object, _options as Object) as Object
+            evaluation.enabled = false
+
+            return evaluation
+          end function,
+        },
+      ],
+    })
+
+    ' Then — hook is active
+    return expect(isEnabled("test", { userId: "user-1" })).toBeFalse()
+  end function)
+
+  it("should remove a hook by name so it no longer affects evaluation", function (_ts as Object) as Object
+    ' Given — feature is enabled by traffic
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            { key: "1", segments: "*", percentage: 100000, allocation: [] },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' When — add hook that disables the feature
+    addHook({
+      name: "disableHook",
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.enabled = false
+
+        return evaluation
+      end function,
+    })
+
+    ' Then — hook is active, feature appears disabled
+    disabledResult = isEnabled("test", { userId: "user-1" })
+
+    ' When — remove the hook
+    removeHook("disableHook")
+
+    ' Then — hook is gone, feature is enabled again
+    enabledResult = isEnabled("test", { userId: "user-1" })
+
+    return [
+      expect(disabledResult).toBeFalse(),
+      expect(enabledResult).toBeTrue(),
+    ]
+  end function)
+
+  it("should only remove the specified hook leaving others active", function (_ts as Object) as Object
+    ' Given — feature with two variations
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 50000] },
+                { variation: "treatment", range: [50000, 100000] },
+              ],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' When — add two hooks: one forces bucket value, another disables the feature
+    addHook({
+      name: "forceBucket",
+      bucketValue: function (_options as Object) as Integer
+        return 1
+      end function,
+    })
+
+    addHook({
+      name: "disableHook",
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.enabled = false
+
+        return evaluation
+      end function,
+    })
+
+    ' Verify both hooks are active
+    disabledResult = isEnabled("test", { userId: "user-1" })
+
+    ' When — remove only the disable hook
+    removeHook("disableHook")
+
+    ' Then — feature is enabled again, but forceBucket hook still forces "control"
+    return [
+      expect(disabledResult).toBeFalse(),
+      expect(isEnabled("test", { userId: "user-1" })).toBeTrue(),
+      expect(getVariation("test", { userId: "user-1" })).toBe("control"),
+      expect(getVariation("test", { userId: "any-other-user" })).toBe("control"),
+    ]
+  end function)
+
+  it("should do nothing when removing a hook name that does not exist", function (_ts as Object) as Object
+    ' Given — feature is enabled, one hook is registered
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [
+            { key: "1", segments: "*", percentage: 100000, allocation: [] },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    addHook({
+      name: "disableHook",
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.enabled = false
+
+        return evaluation
+      end function,
+    })
+
+    ' When — attempt to remove a non-existent hook
+    removeHook("nonExistentHook")
+
+    ' Then — the existing hook is still active (feature still disabled)
+    return expect(isEnabled("test", { userId: "user-1" })).toBeFalse()
+  end function)
+
+  it("should allow re-adding a hook after it was removed", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [
+                { variation: "control", range: [0, 50000] },
+                { variation: "treatment", range: [50000, 100000] },
+              ],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' When — add hook that forces bucket to "treatment" range
+    addHook({
+      name: "forceTreatment",
+      bucketValue: function (_options as Object) as Integer
+        return 75000
+      end function,
+    })
+    resultWithHook = getVariation("test", { userId: "user-1" })
+
+    ' Remove it
+    removeHook("forceTreatment")
+
+    ' Re-add with different behaviour — forces "control" range
+    addHook({
+      name: "forceTreatment",
+      bucketValue: function (_options as Object) as Integer
+        return 1
+      end function,
+    })
+    resultAfterReAdd = getVariation("test", { userId: "user-1" })
+
+    ' Then
+    return [
+      expect(resultWithHook).toBe("treatment"),
+      expect(resultAfterReAdd).toBe("control"),
+    ]
   end function)
 
   it("should apply OverrideOptions sticky per call", function (_ts as Object) as Object

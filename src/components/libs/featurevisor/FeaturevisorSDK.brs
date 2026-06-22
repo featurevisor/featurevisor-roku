@@ -76,10 +76,16 @@ function FeaturevisorSDK() as Object
     return m._featurevisorInstance.callFunc("activate", feature, context, options)
   end function
 
-  prototype.addHook = sub (hook as Object)
+  prototype.addHook = sub (hook as Object) as String
+    if (m._featurevisorInstance = Invalid) then return ""
+
+    return m._featurevisorInstance.callFunc("addHook", hook)
+  end sub
+
+  prototype.removeHook = sub (hookName as String)
     if (m._featurevisorInstance = Invalid) then return
 
-    m._featurevisorInstance.callFunc("addHook", hook)
+    m._featurevisorInstance.callFunc("removeHook", hookName)
   end sub
 
   prototype.clear = sub (options = {} as Object)
