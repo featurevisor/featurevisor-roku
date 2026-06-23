@@ -7,8 +7,11 @@ function FeaturevisorSDK() as Object
   prototype._featurevisorInstance = Invalid
   prototype._isReady = false
   prototype._onActivation = { callback: Invalid, context: Invalid }
+  prototype._onContextChanged = { callback: Invalid, context: Invalid }
+  prototype._onDatafileChanged = { callback: Invalid, context: Invalid }
   prototype._onReady = { callback: Invalid, context: Invalid }
   prototype._onRefresh = { callback: Invalid, context: Invalid }
+  prototype._onStickyChanged = { callback: Invalid, context: Invalid }
   prototype._onUpdate = { callback: Invalid, context: Invalid }
 
   prototype.createInstance = function (options as Object, featurevisorInstance = Invalid as Object) as Object
@@ -26,6 +29,18 @@ function FeaturevisorSDK() as Object
       m.onActivation(m._onActivation.callback, m._onActivation.context)
     end if
 
+    if (getType(getProperty(options, ["onContextChanged", "callback"])) = "roFunction")
+      m.onContextChanged(options.onContextChanged.callback, options.onContextChanged.context)
+    else if (getType(m._onContextChanged.callback) = "roFunction")
+      m.onContextChanged(m._onContextChanged.callback, m._onContextChanged.context)
+    end if
+
+    if (getType(getProperty(options, ["onDatafileChanged", "callback"])) = "roFunction")
+      m.onDatafileChanged(options.onDatafileChanged.callback, options.onDatafileChanged.context)
+    else if (getType(m._onDatafileChanged.callback) = "roFunction")
+      m.onDatafileChanged(m._onDatafileChanged.callback, m._onDatafileChanged.context)
+    end if
+
     if (getType(getProperty(options, ["onReady", "callback"])) = "roFunction")
       m.onReady(options.onReady.callback, options.onReady.context)
     else if (getType(m._onReady.callback) = "roFunction")
@@ -36,6 +51,12 @@ function FeaturevisorSDK() as Object
       m.onRefresh(options.onRefresh.callback, options.onRefresh.context)
     else if (getType(m._onRefresh.callback) = "roFunction")
       m.onRefresh(m._onRefresh.callback, m._onRefresh.context)
+    end if
+
+    if (getType(getProperty(options, ["onStickyChanged", "callback"])) = "roFunction")
+      m.onStickyChanged(options.onStickyChanged.callback, options.onStickyChanged.context)
+    else if (getType(m._onStickyChanged.callback) = "roFunction")
+      m.onStickyChanged(m._onStickyChanged.callback, m._onStickyChanged.context)
     end if
 
     if (getType(getProperty(options, ["onUpdate", "callback"])) = "roFunction")
@@ -49,11 +70,23 @@ function FeaturevisorSDK() as Object
     return featurevisorInstance
   end function
 
-  prototype.activate = function (feature as Dynamic, context = {} as Object) as Object
+  prototype.activate = function (feature as Dynamic, context = {} as Object, options = {} as Object) as Object
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("activate", feature, context)
+    return m._featurevisorInstance.callFunc("activate", feature, context, options)
   end function
+
+  prototype.addHook = sub (hook as Object) as String
+    if (m._featurevisorInstance = Invalid) then return ""
+
+    return m._featurevisorInstance.callFunc("addHook", hook)
+  end sub
+
+  prototype.removeHook = sub (hookName as String)
+    if (m._featurevisorInstance = Invalid) then return
+
+    m._featurevisorInstance.callFunc("removeHook", hookName)
+  end sub
 
   prototype.clear = sub (options = {} as Object)
     if (m._featurevisorInstance = Invalid) then return
@@ -61,36 +94,48 @@ function FeaturevisorSDK() as Object
     m._isReady = false
 
     m._featurevisorInstance.unobserveFieldScoped("activated")
+    m._featurevisorInstance.unobserveFieldScoped("contextChange")
+    m._featurevisorInstance.unobserveFieldScoped("datafileChange")
     m._featurevisorInstance.unobserveFieldScoped("ready")
     m._featurevisorInstance.unobserveFieldScoped("refreshed")
+    m._featurevisorInstance.unobserveFieldScoped("stickyChange")
     m._featurevisorInstance.unobserveFieldScoped("updated")
 
     if (getProperty(options, "clearCallbackDefinitions", false))
       m._onActivation = { callback: Invalid, context: Invalid }
+      m._onContextChanged = { callback: Invalid, context: Invalid }
+      m._onDatafileChanged = { callback: Invalid, context: Invalid }
       m._onReady = { callback: Invalid, context: Invalid }
       m._onRefresh = { callback: Invalid, context: Invalid }
+      m._onStickyChanged = { callback: Invalid, context: Invalid }
       m._onUpdate = { callback: Invalid, context: Invalid }
     end if
 
     m._featurevisorInstance.callFunc("clear")
   end sub
 
-  prototype.evaluateFlag = function (featureKey as String, context = {} as Object) as Object
+  prototype.close = sub ()
+    if (m._featurevisorInstance = Invalid) then return
+
+    m.clear()
+  end sub
+
+  prototype.evaluateFlag = function (featureKey as String, context = {} as Object, options = {} as Object) as Object
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("evaluateFlag", featureKey, context)
+    return m._featurevisorInstance.callFunc("evaluateFlag", featureKey, context, options)
   end function
 
-  prototype.evaluateVariable = function (feature as Dynamic, variableKey as String, context = {} as Object) as Object
+  prototype.evaluateVariable = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Object
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("evaluateVariable", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("evaluateVariable", feature, variableKey, context, options)
   end function
 
-  prototype.evaluateVariation = function (feature as Dynamic, context = {} as Object) as Object
+  prototype.evaluateVariation = function (feature as Dynamic, context = {} as Object, options = {} as Object) as Object
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("evaluateVariation", feature, context)
+    return m._featurevisorInstance.callFunc("evaluateVariation", feature, context, options)
   end function
 
   prototype.getFeature = function (feature as Dynamic) as Object
@@ -105,10 +150,10 @@ function FeaturevisorSDK() as Object
     return m._featurevisorInstance.callFunc("getRevision")
   end function
 
-  prototype.getVariable = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariable = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariable", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariable", feature, variableKey, context, options)
   end function
 
   prototype.getVariableArray = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
@@ -153,16 +198,16 @@ function FeaturevisorSDK() as Object
     return m._featurevisorInstance.callFunc("getVariableString", feature, variableKey, context)
   end function
 
-  prototype.getVariation = function (feature as Dynamic, context = {} as Object) as Dynamic
+  prototype.getVariation = function (feature as Dynamic, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariation", feature, context)
+    return m._featurevisorInstance.callFunc("getVariation", feature, context, options)
   end function
 
-  prototype.isEnabled = function (featureKey as String, context = {} as Object) as Boolean
+  prototype.isEnabled = function (featureKey as String, context = {} as Object, options = {} as Object) as Boolean
     if (m._featurevisorInstance = Invalid) then return false
 
-    return m._featurevisorInstance.callFunc("isEnabled", featureKey, context)
+    return m._featurevisorInstance.callFunc("isEnabled", featureKey, context, options)
   end function
 
   prototype.isReady = function () as Boolean
@@ -175,6 +220,24 @@ function FeaturevisorSDK() as Object
     if (m._featurevisorInstance <> Invalid)
       m._featurevisorInstance.unobserveFieldScoped("activated")
       m._featurevisorInstance.observeFieldScoped("activated", "Featurevisor_onActivation")
+    end if
+  end sub
+
+  prototype.onContextChanged = sub (func as Function, context = Invalid as Object)
+    m._onContextChanged = { callback: func, context: context }
+
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("contextChange")
+      m._featurevisorInstance.observeFieldScoped("contextChange", "Featurevisor_onContextChanged")
+    end if
+  end sub
+
+  prototype.onDatafileChanged = sub (func as Function, context = Invalid as Object)
+    m._onDatafileChanged = { callback: func, context: context }
+
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("datafileChange")
+      m._featurevisorInstance.observeFieldScoped("datafileChange", "Featurevisor_onDatafileChanged")
     end if
   end sub
 
@@ -193,6 +256,15 @@ function FeaturevisorSDK() as Object
     if (m._featurevisorInstance <> Invalid)
       m._featurevisorInstance.unobserveFieldScoped("refreshed")
       m._featurevisorInstance.observeFieldScoped("refreshed", "Featurevisor_onRefresh")
+    end if
+  end sub
+
+  prototype.onStickyChanged = sub (func as Function, context = Invalid as Object)
+    m._onStickyChanged = { callback: func, context: context }
+
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("stickyChange")
+      m._featurevisorInstance.observeFieldScoped("stickyChange", "Featurevisor_onStickyChanged")
     end if
   end sub
 
@@ -217,6 +289,31 @@ function FeaturevisorSDK() as Object
     m._featurevisorInstance.callFunc("setDatafile", datafile)
   end sub
 
+  prototype.getAllEvaluations = function (context = {} as Object, featureKeys = [] as Object) as Object
+    if (m._featurevisorInstance = Invalid) then return {}
+
+    return m._featurevisorInstance.callFunc("getAllEvaluations", context, featureKeys)
+  end function
+
+  prototype.getContext = function (context = {} as Object) as Object
+    if (m._featurevisorInstance = Invalid) then return {}
+
+    return m._featurevisorInstance.callFunc("getContext", context)
+  end function
+
+  prototype.setContext = sub (context as Object, replace = false as Boolean)
+    if (m._featurevisorInstance = Invalid) then return
+
+    m._featurevisorInstance.callFunc("setContext", context, replace)
+  end sub
+
+  prototype.setSticky = sub (stickyFeatures as Object, replace = false as Boolean)
+    if (m._featurevisorInstance = Invalid) then return
+
+    m._featurevisorInstance.callFunc("setSticky", stickyFeatures, replace)
+  end sub
+
+  ' @deprecated Use setSticky instead
   prototype.setStickyFeatures = sub (stickyFeatures as Object)
     if (m._featurevisorInstance = Invalid) then return
 
@@ -227,6 +324,12 @@ function FeaturevisorSDK() as Object
     if (m._featurevisorInstance = Invalid) then return
 
     m._featurevisorInstance.callFunc("startRefreshing")
+  end sub
+
+  prototype.setLogLevel = sub (level as String)
+    if (m._featurevisorInstance = Invalid) then return
+
+    m._featurevisorInstance.callFunc("setLogLevel", level)
   end sub
 
   prototype.stopRefreshing = sub ()
@@ -244,6 +347,14 @@ sub Featurevisor_onActivation(event as Object)
   Featurevisor_callback("$$FeaturevisorSDK_onActivation", m["$$FeaturevisorSDK"]._onActivation, event.getData())
 end sub
 
+sub Featurevisor_onContextChanged(event as Object)
+  Featurevisor_callback("$$FeaturevisorSDK_onContextChanged", m["$$FeaturevisorSDK"]._onContextChanged, event.getData())
+end sub
+
+sub Featurevisor_onDatafileChanged(event as Object)
+  Featurevisor_callback("$$FeaturevisorSDK_onDatafileChanged", m["$$FeaturevisorSDK"]._onDatafileChanged, event.getData())
+end sub
+
 sub Featurevisor_onReady(_event as Object)
   m["$$FeaturevisorSDK"]._isReady = true
   Featurevisor_callback("$$FeaturevisorSDK_onReady", m["$$FeaturevisorSDK"]._onReady)
@@ -251,6 +362,10 @@ end sub
 
 sub Featurevisor_onRefresh(_event as Object)
   Featurevisor_callback("$$FeaturevisorSDK_onRefresh", m["$$FeaturevisorSDK"]._onRefresh)
+end sub
+
+sub Featurevisor_onStickyChanged(event as Object)
+  Featurevisor_callback("$$FeaturevisorSDK_onStickyChanged", m["$$FeaturevisorSDK"]._onStickyChanged, event.getData())
 end sub
 
 sub Featurevisor_onUpdate(_event as Object)

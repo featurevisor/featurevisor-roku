@@ -31,7 +31,11 @@ function featurevisorGetMatchedTrafficAndAllocation(traffic as Object, context a
     }
   end if
 
-  matchedAllocation = ArrayUtils().find(matchedTraffic.allocation, function (allocation as Object, context as Object) as Boolean
+  allocation = matchedTraffic.allocation
+  if (allocation = Invalid OR getType(allocation) <> "roArray")
+    allocation = []
+  end if
+  matchedAllocation = ArrayUtils().find(allocation, function (allocation as Object, context as Object) as Boolean
     return allocation.range <> Invalid AND allocation.range[0] <= context.bucketValue AND allocation.range[1] >= context.bucketValue
   end function, { bucketValue: bucketValue })
 
