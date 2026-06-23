@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.4...v2.0.0) (2026-06-23)
+
+
+* feat!: support v2 datafile and catch up with JS SDK ([#9](https://github.com/featurevisor/featurevisor-roku/issues/9)) ([91b888d](https://github.com/featurevisor/featurevisor-roku/commit/91b888d90197cf252cf7e17a434914810bde72fc))
+
+
+### BREAKING CHANGES
+
+* support v2 datafile and catch up with JS SDK
+
+Addresses https://github.com/featurevisor/featurevisor-roku/issues/7
+
 ## [1.1.4](https://github.com/featurevisor/featurevisor-roku/compare/v1.1.3...v1.1.4) (2026-06-20)
 
 
