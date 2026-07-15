@@ -9,12 +9,13 @@ function FeaturevisorSDK() as Object
   prototype._onActivation = { callback: Invalid, context: Invalid }
   prototype._onContextChanged = { callback: Invalid, context: Invalid }
   prototype._onDatafileChanged = { callback: Invalid, context: Invalid }
+  prototype._onError = { callback: Invalid, context: Invalid }
   prototype._onReady = { callback: Invalid, context: Invalid }
   prototype._onRefresh = { callback: Invalid, context: Invalid }
   prototype._onStickyChanged = { callback: Invalid, context: Invalid }
   prototype._onUpdate = { callback: Invalid, context: Invalid }
 
-  prototype.createInstance = function (options as Object, featurevisorInstance = Invalid as Object) as Object
+  prototype.createFeaturevisor = function (options as Object, featurevisorInstance = Invalid as Object) as Object
     m.clear()
 
     if (featurevisorInstance = Invalid)
@@ -39,6 +40,12 @@ function FeaturevisorSDK() as Object
       m.onDatafileChanged(options.onDatafileChanged.callback, options.onDatafileChanged.context)
     else if (getType(m._onDatafileChanged.callback) = "roFunction")
       m.onDatafileChanged(m._onDatafileChanged.callback, m._onDatafileChanged.context)
+    end if
+
+    if (getType(getProperty(options, ["onError", "callback"])) = "roFunction")
+      m.onError(options.onError.callback, options.onError.context)
+    else if (getType(m._onError.callback) = "roFunction")
+      m.onError(m._onError.callback, m._onError.context)
     end if
 
     if (getType(getProperty(options, ["onReady", "callback"])) = "roFunction")
@@ -70,22 +77,27 @@ function FeaturevisorSDK() as Object
     return featurevisorInstance
   end function
 
+  ' @deprecated Use createFeaturevisor instead
+  prototype.createInstance = function (options as Object, featurevisorInstance = Invalid as Object) as Object
+    return m.createFeaturevisor(options, featurevisorInstance)
+  end function
+
   prototype.activate = function (feature as Dynamic, context = {} as Object, options = {} as Object) as Object
     if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("activate", feature, context, options)
   end function
 
-  prototype.addHook = sub (hook as Object) as String
+  prototype.addModule = function (module as Object) as String
     if (m._featurevisorInstance = Invalid) then return ""
 
-    return m._featurevisorInstance.callFunc("addHook", hook)
-  end sub
+    return m._featurevisorInstance.callFunc("addModule", module)
+  end function
 
-  prototype.removeHook = sub (hookName as String)
+  prototype.removeModule = sub (nameOrId as String)
     if (m._featurevisorInstance = Invalid) then return
 
-    m._featurevisorInstance.callFunc("removeHook", hookName)
+    m._featurevisorInstance.callFunc("removeModule", nameOrId)
   end sub
 
   prototype.clear = sub (options = {} as Object)
@@ -96,6 +108,7 @@ function FeaturevisorSDK() as Object
     m._featurevisorInstance.unobserveFieldScoped("activated")
     m._featurevisorInstance.unobserveFieldScoped("contextChange")
     m._featurevisorInstance.unobserveFieldScoped("datafileChange")
+    m._featurevisorInstance.unobserveFieldScoped("errored")
     m._featurevisorInstance.unobserveFieldScoped("ready")
     m._featurevisorInstance.unobserveFieldScoped("refreshed")
     m._featurevisorInstance.unobserveFieldScoped("stickyChange")
@@ -105,6 +118,7 @@ function FeaturevisorSDK() as Object
       m._onActivation = { callback: Invalid, context: Invalid }
       m._onContextChanged = { callback: Invalid, context: Invalid }
       m._onDatafileChanged = { callback: Invalid, context: Invalid }
+      m._onError = { callback: Invalid, context: Invalid }
       m._onReady = { callback: Invalid, context: Invalid }
       m._onRefresh = { callback: Invalid, context: Invalid }
       m._onStickyChanged = { callback: Invalid, context: Invalid }
@@ -150,52 +164,82 @@ function FeaturevisorSDK() as Object
     return m._featurevisorInstance.callFunc("getRevision")
   end function
 
+  prototype.getSchemaVersion = function () as String
+    if (m._featurevisorInstance = Invalid) then return ""
+
+    return m._featurevisorInstance.callFunc("getSchemaVersion")
+  end function
+
+  prototype.getSegment = function (segmentKey as String) as Object
+    if (m._featurevisorInstance = Invalid) then return Invalid
+
+    return m._featurevisorInstance.callFunc("getSegment", segmentKey)
+  end function
+
+  prototype.getFeatureKeys = function () as Object
+    if (m._featurevisorInstance = Invalid) then return []
+
+    return m._featurevisorInstance.callFunc("getFeatureKeys")
+  end function
+
+  prototype.getVariableKeys = function (featureKey as String) as Object
+    if (m._featurevisorInstance = Invalid) then return []
+
+    return m._featurevisorInstance.callFunc("getVariableKeys", featureKey)
+  end function
+
+  prototype.hasVariations = function (featureKey as String) as Boolean
+    if (m._featurevisorInstance = Invalid) then return false
+
+    return m._featurevisorInstance.callFunc("hasVariations", featureKey)
+  end function
+
   prototype.getVariable = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
     return m._featurevisorInstance.callFunc("getVariable", feature, variableKey, context, options)
   end function
 
-  prototype.getVariableArray = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariableArray = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariableArray", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableArray", feature, variableKey, context, options)
   end function
 
-  prototype.getVariableBoolean = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariableBoolean = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariableBoolean", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableBoolean", feature, variableKey, context, options)
   end function
 
-  prototype.getVariableDouble = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariableDouble = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariableDouble", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableDouble", feature, variableKey, context, options)
   end function
 
-  prototype.getVariableInteger = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariableInteger = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariableInteger", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableInteger", feature, variableKey, context, options)
   end function
 
-  prototype.getVariableJSON = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariableJSON = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariableJSON", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableJSON", feature, variableKey, context, options)
   end function
 
-  prototype.getVariableObject = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariableObject = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariableObject", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableObject", feature, variableKey, context, options)
   end function
 
-  prototype.getVariableString = function (feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic
+  prototype.getVariableString = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
     if (m._featurevisorInstance = Invalid) then return Invalid
 
-    return m._featurevisorInstance.callFunc("getVariableString", feature, variableKey, context)
+    return m._featurevisorInstance.callFunc("getVariableString", feature, variableKey, context, options)
   end function
 
   prototype.getVariation = function (feature as Dynamic, context = {} as Object, options = {} as Object) as Dynamic
@@ -241,6 +285,15 @@ function FeaturevisorSDK() as Object
     end if
   end sub
 
+  prototype.onError = sub (func as Function, context = Invalid as Object)
+    m._onError = { callback: func, context: context }
+
+    if (m._featurevisorInstance <> Invalid)
+      m._featurevisorInstance.unobserveFieldScoped("errored")
+      m._featurevisorInstance.observeFieldScoped("errored", "Featurevisor_onError")
+    end if
+  end sub
+
   prototype.onReady = sub (func as Function, context = Invalid as Object)
     m._onReady = { callback: func, context: context }
 
@@ -283,16 +336,16 @@ function FeaturevisorSDK() as Object
     m._featurevisorInstance.callFunc("refresh")
   end sub
 
-  prototype.setDatafile = sub (datafile as Dynamic)
+  prototype.setDatafile = sub (datafile as Dynamic, replace = false as Boolean)
     if (m._featurevisorInstance = Invalid) then return
 
-    m._featurevisorInstance.callFunc("setDatafile", datafile)
+    m._featurevisorInstance.callFunc("setDatafile", datafile, replace)
   end sub
 
-  prototype.getAllEvaluations = function (context = {} as Object, featureKeys = [] as Object) as Object
+  prototype.getAllEvaluations = function (context = {} as Object, featureKeys = [] as Object, options = {} as Object) as Object
     if (m._featurevisorInstance = Invalid) then return {}
 
-    return m._featurevisorInstance.callFunc("getAllEvaluations", context, featureKeys)
+    return m._featurevisorInstance.callFunc("getAllEvaluations", context, featureKeys, options)
   end function
 
   prototype.getContext = function (context = {} as Object) as Object
@@ -312,6 +365,14 @@ function FeaturevisorSDK() as Object
 
     m._featurevisorInstance.callFunc("setSticky", stickyFeatures, replace)
   end sub
+
+  prototype.spawn = function (context = {} as Object, options = {} as Object) as Object
+    if (m._featurevisorInstance = Invalid) then return Invalid
+
+    childContext = m._featurevisorInstance.callFunc("getContext", context)
+
+    return Featurevisor_createChildInstance(m._featurevisorInstance, childContext, getProperty(options, ["sticky"], {}))
+  end function
 
   ' @deprecated Use setSticky instead
   prototype.setStickyFeatures = sub (stickyFeatures as Object)
@@ -343,6 +404,141 @@ function FeaturevisorSDK() as Object
   return prototype
 end function
 
+function Featurevisor_createChildInstance(featurevisorInstance as Object, context as Object, sticky as Object) as Object
+  child = {}
+
+  child._context = context
+  child._featurevisorInstance = featurevisorInstance
+  child._onContextChanged = { callback: Invalid, context: Invalid }
+  child._onStickyChanged = { callback: Invalid, context: Invalid }
+  child._sticky = sticky
+
+  child.close = sub ()
+    m._onContextChanged = { callback: Invalid, context: Invalid }
+    m._onStickyChanged = { callback: Invalid, context: Invalid }
+  end sub
+
+  child.getAllEvaluations = function (context = {} as Object, featureKeys = [] as Object, options = {} as Object) as Object
+    return m._featurevisorInstance.callFunc("getAllEvaluations", m._mergeContext(context), featureKeys, m._childOptions(options))
+  end function
+
+  child.getContext = function (context = {} as Object) as Object
+    return m._featurevisorInstance.callFunc("getContext", m._mergeContext(context))
+  end function
+
+  child.getVariable = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariable", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariableArray = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariableArray", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariableBoolean = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariableBoolean", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariableDouble = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariableDouble", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariableInteger = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariableInteger", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariableJSON = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariableJSON", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariableObject = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariableObject", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariableString = function (feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariableString", feature, variableKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.getVariation = function (feature as Dynamic, context = {} as Object, options = {} as Object) as Dynamic
+    return m._featurevisorInstance.callFunc("getVariation", feature, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.isEnabled = function (featureKey as String, context = {} as Object, options = {} as Object) as Boolean
+    return m._featurevisorInstance.callFunc("isEnabled", featureKey, m._mergeContext(context), m._childOptions(options))
+  end function
+
+  child.onContextChanged = sub (func as Function, context = Invalid as Object)
+    m._onContextChanged = { callback: func, context: context }
+  end sub
+
+  child.onStickyChanged = sub (func as Function, context = Invalid as Object)
+    m._onStickyChanged = { callback: func, context: context }
+  end sub
+
+  child.setContext = sub (context as Object, replace = false as Boolean)
+    if (replace)
+      m._context = context
+    else
+      m._context = m._mergeContext(context)
+    end if
+
+    Featurevisor_callback("$$FeaturevisorChild_onContextChanged", m._onContextChanged, { context: m._context, replaced: replace })
+  end sub
+
+  child.setSticky = sub (sticky as Object, replace = false as Boolean)
+    featureKeys = {}
+    for each key in m._sticky
+      featureKeys[key] = true
+    end for
+    for each key in sticky
+      featureKeys[key] = true
+    end for
+
+    features = []
+    for each key in featureKeys
+      features.push(key)
+    end for
+
+    if (replace)
+      m._sticky = sticky
+    else
+      merged = {}
+      for each key in m._sticky
+        merged[key] = m._sticky[key]
+      end for
+      for each key in sticky
+        merged[key] = sticky[key]
+      end for
+      m._sticky = merged
+    end if
+
+    Featurevisor_callback("$$FeaturevisorChild_onStickyChanged", m._onStickyChanged, { features: features, replaced: replace })
+  end sub
+
+  child._childOptions = function (options as Object) as Object
+    scoped = {}
+    for each key in options
+      scoped[key] = options[key]
+    end for
+    scoped["__childSticky"] = m._sticky
+
+    return scoped
+  end function
+
+  child._mergeContext = function (context as Object) as Object
+    merged = {}
+    for each key in m._context
+      merged[key] = m._context[key]
+    end for
+    for each key in context
+      merged[key] = context[key]
+    end for
+
+    return merged
+  end function
+
+  return child
+end function
+
 sub Featurevisor_onActivation(event as Object)
   Featurevisor_callback("$$FeaturevisorSDK_onActivation", m["$$FeaturevisorSDK"]._onActivation, event.getData())
 end sub
@@ -353,6 +549,10 @@ end sub
 
 sub Featurevisor_onDatafileChanged(event as Object)
   Featurevisor_callback("$$FeaturevisorSDK_onDatafileChanged", m["$$FeaturevisorSDK"]._onDatafileChanged, event.getData())
+end sub
+
+sub Featurevisor_onError(event as Object)
+  Featurevisor_callback("$$FeaturevisorSDK_onError", m["$$FeaturevisorSDK"]._onError, event.getData())
 end sub
 
 sub Featurevisor_onReady(_event as Object)

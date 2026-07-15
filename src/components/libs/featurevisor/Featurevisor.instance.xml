@@ -6,6 +6,7 @@
     <field id="activated" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="contextChange" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="datafileChange" type="assocarray" alwaysNotify="true" value="{}" />
+    <field id="errored" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="ready" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="refreshed" type="assocarray" alwaysNotify="true" value="{}" />
     <field id="stickyChange" type="assocarray" alwaysNotify="true" value="{}" />
@@ -13,7 +14,7 @@
 
     <!-- Functions -->
     <function name="activate" />
-    <function name="addHook" />
+    <function name="addModule" />
     <function name="clear" />
     <function name="close" />
     <function name="evaluateFlag" />
@@ -22,20 +23,25 @@
     <function name="getAllEvaluations" />
     <function name="getContext" />
     <function name="getFeature" />
+    <function name="getFeatureKeys" />
     <function name="getRevision" />
+    <function name="getSchemaVersion" />
+    <function name="getSegment" />
     <function name="getVariable" />
     <function name="getVariableArray" />
     <function name="getVariableBoolean" />
     <function name="getVariableDouble" />
     <function name="getVariableInteger" />
     <function name="getVariableJSON" />
+    <function name="getVariableKeys" />
     <function name="getVariableObject" />
     <function name="getVariableString" />
     <function name="getVariation" />
+    <function name="hasVariations" />
     <function name="initialize" />
     <function name="isEnabled" />
     <function name="refresh" />
-    <function name="removeHook" />
+    <function name="removeModule" />
     <function name="setContext" />
     <function name="setDatafile" />
     <function name="setLogLevel" />

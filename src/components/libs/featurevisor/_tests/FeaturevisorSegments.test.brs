@@ -78,6 +78,25 @@ function TestSuite__FeaturevisorSegments() as Object
     ]
   end sub)
 
+  it("should not match empty NOT group", function (_ts as Object) as Object
+    return [
+      expect(featurevisorAllGroupSegmentsAreMatched([{ "not": [] }], { deviceType: "mobile" }, m.__datafileReader)).toBeFalse(),
+      expect(featurevisorAllGroupSegmentsAreMatched([{ "not": [] }], {}, m.__datafileReader)).toBeFalse(),
+    ]
+  end function)
+
+  it("should negate whole NOT group with multiple segments", function (_ts as Object) as Object
+    ' Given
+    segments = [{ "not": ["mobileUsers", "netherlands"] }]
+
+    ' Then
+    return [
+      expect(featurevisorAllGroupSegmentsAreMatched(segments, { country: "nl", deviceType: "mobile" }, m.__datafileReader)).toBeFalse(),
+      expect(featurevisorAllGroupSegmentsAreMatched(segments, { country: "nl", deviceType: "desktop" }, m.__datafileReader)).toBeTrue(),
+      expect(featurevisorAllGroupSegmentsAreMatched(segments, {}, m.__datafileReader)).toBeTrue(),
+    ]
+  end function)
+
   it("should match everyone", function (_ts as Object) as Object
     ' Given
     group = m.__arrayUtils.find(m.__groups, { key: "*" })

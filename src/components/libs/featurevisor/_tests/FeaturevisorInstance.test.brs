@@ -1676,7 +1676,7 @@ function TestSuite__FeaturevisorInstance() as Object
     return expect(m.__stickyChangedPayload).toBeValid()
   end function)
 
-  it("should apply before hook to redirect feature evaluation", function (_ts as Object) as Object
+  it("should apply before module to redirect feature evaluation", function (_ts as Object) as Object
     ' Given — two features: "original" is disabled, "redirected" is enabled
     datafile = {
       schemaVersion: "1",
@@ -1700,8 +1700,8 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — hook redirects "original" → "redirected"
-    addHook({
+    ' When — module redirects "original" → "redirected"
+    addModule({
       name: "redirectHook",
       before: function (options as Object) as Object
         if (options.featureKey = "original")
@@ -1719,7 +1719,7 @@ function TestSuite__FeaturevisorInstance() as Object
     ]
   end function)
 
-  it("should apply before hook with context so m inside the hook is that context", function (_ts as Object) as Object
+  it("should apply before module with context so m inside the module is that context", function (_ts as Object) as Object
     ' Given
     datafile = {
       schemaVersion: "1",
@@ -1739,11 +1739,11 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    hookContext = { targetFeature: "featureB" }
+    moduleContext = { targetFeature: "featureB" }
 
-    addHook({
+    addModule({
       name: "contextRedirectHook",
-      context: hookContext,
+      context: moduleContext,
       before: function (options as Object) as Object
         options.featureKey = m.targetFeature
 
@@ -1751,11 +1751,11 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    ' Then — "featureA" is redirected to "featureB" (enabled) via hook context
+    ' Then — "featureA" is redirected to "featureB" (enabled) via module context
     return expect(isEnabled("featureA", { userId: "user-1" })).toBeTrue()
   end function)
 
-  it("should apply after hook to override evaluation result", function (_ts as Object) as Object
+  it("should apply after module to override evaluation result", function (_ts as Object) as Object
     ' Given — feature exists and is enabled
     datafile = {
       schemaVersion: "1",
@@ -1774,8 +1774,8 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — after hook forces the feature to disabled
-    addHook({
+    ' When — after module forces the feature to disabled
+    addModule({
       name: "disableHook",
       after: function (evaluation as Object, _options as Object) as Object
         evaluation.enabled = false
@@ -1784,14 +1784,14 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    ' Then — even though traffic matches, the after hook overrides to disabled
+    ' Then — even though traffic matches, the after module overrides to disabled
     return [
       expect(isEnabled("test", { userId: "user-1" })).toBeFalse(),
       expect(evaluateFlag("test", { userId: "user-1" }).enabled).toBeFalse(),
     ]
   end function)
 
-  it("should apply after hook with context so m inside the hook is that context", function (_ts as Object) as Object
+  it("should apply after module with context so m inside the module is that context", function (_ts as Object) as Object
     ' Given
     datafile = {
       schemaVersion: "1",
@@ -1816,11 +1816,11 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    hookContext = { forcedVariation: "treatment" }
+    moduleContext = { forcedVariation: "treatment" }
 
-    addHook({
+    addModule({
       name: "forceVariationHook",
-      context: hookContext,
+      context: moduleContext,
       after: function (evaluation as Object, _options as Object) as Object
         evaluation.variationValue = m.forcedVariation
 
@@ -1828,11 +1828,11 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    ' Then — after hook forces variation to "treatment" even though allocation gives "control"
+    ' Then — after module forces variation to "treatment" even though allocation gives "control"
     return expect(getVariation("test", { userId: "user-1" })).toBe("treatment")
   end function)
 
-  it("should apply bucketKey hook to modify bucketing", function (_ts as Object) as Object
+  it("should apply bucketKey module to modify bucketing", function (_ts as Object) as Object
     ' Given — feature with two variations split 50/50
     datafile = {
       schemaVersion: "1",
@@ -1860,8 +1860,8 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — hook forces a completely different bucket key, changing the hash
-    addHook({
+    ' When — module forces a completely different bucket key, changing the hash
+    addModule({
       name: "bucketKeyHook",
       bucketKey: function (_options as Object) as String
         return "forced-bucket-key.test"
@@ -1876,7 +1876,7 @@ function TestSuite__FeaturevisorInstance() as Object
     return expect(variationA).toBe(variationB)
   end function)
 
-  it("should apply bucketValue hook to force allocation", function (_ts as Object) as Object
+  it("should apply bucketValue module to force allocation", function (_ts as Object) as Object
     ' Given — feature with control [0, 50000] and treatment [50000, 100000]
     datafile = {
       schemaVersion: "1",
@@ -1904,8 +1904,8 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — hook forces bucket value to 1 (always in "control" range)
-    addHook({
+    ' When — module forces bucket value to 1 (always in "control" range)
+    addModule({
       name: "forceBucketValueHook",
       bucketValue: function (_options as Object) as Integer
         return 1
@@ -1920,9 +1920,9 @@ function TestSuite__FeaturevisorInstance() as Object
     ]
   end function)
 
-  ' ===== DUPLICATE HOOK REJECTION =====
+  ' ===== DUPLICATE MODULE REJECTION =====
 
-  it("should silently reject duplicate hook names", function (_ts as Object) as Object
+  it("should silently reject duplicate module names", function (_ts as Object) as Object
     ' Given
     datafile = {
       schemaVersion: "1",
@@ -1941,8 +1941,8 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — first hook disables, second hook (same name) would enable
-    addHook({
+    ' When — first module disables, second module (same name) would enable
+    addModule({
       name: "myHook",
       after: function (evaluation as Object, _options as Object) as Object
         evaluation.enabled = false
@@ -1951,7 +1951,7 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    addHook({
+    addModule({
       name: "myHook",
       after: function (evaluation as Object, _options as Object) as Object
         evaluation.enabled = true
@@ -1960,13 +1960,13 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    ' Then — only the first hook is registered (disables the feature)
+    ' Then — only the first module is registered (disables the feature)
     return expect(isEnabled("test", { userId: "user-1" })).toBeFalse()
   end function)
 
-  ' ===== HOOKS VIA OPTIONS =====
+  ' ===== MODULES VIA OPTIONS =====
 
-  it("should register hooks passed via initialize options", function (_ts as Object) as Object
+  it("should register modules passed via initialize options", function (_ts as Object) as Object
     ' Given
     datafile = {
       schemaVersion: "1",
@@ -1984,10 +1984,10 @@ function TestSuite__FeaturevisorInstance() as Object
       segments: [],
     }
 
-    ' When — hook passed at init time
+    ' When — module passed at init time
     initialize({
       datafile: datafile,
-      hooks: [
+      modules: [
         {
           name: "initHook",
           after: function (evaluation as Object, _options as Object) as Object
@@ -1999,11 +1999,11 @@ function TestSuite__FeaturevisorInstance() as Object
       ],
     })
 
-    ' Then — hook is active
+    ' Then — module is active
     return expect(isEnabled("test", { userId: "user-1" })).toBeFalse()
   end function)
 
-  it("should remove a hook by name so it no longer affects evaluation", function (_ts as Object) as Object
+  it("should remove a module by name so it no longer affects evaluation", function (_ts as Object) as Object
     ' Given — feature is enabled by traffic
     datafile = {
       schemaVersion: "1",
@@ -2022,8 +2022,8 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — add hook that disables the feature
-    addHook({
+    ' When — add module that disables the feature
+    addModule({
       name: "disableHook",
       after: function (evaluation as Object, _options as Object) as Object
         evaluation.enabled = false
@@ -2032,13 +2032,13 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    ' Then — hook is active, feature appears disabled
+    ' Then — module is active, feature appears disabled
     disabledResult = isEnabled("test", { userId: "user-1" })
 
-    ' When — remove the hook
-    removeHook("disableHook")
+    ' When — remove the module
+    removeModule("disableHook")
 
-    ' Then — hook is gone, feature is enabled again
+    ' Then — module is gone, feature is enabled again
     enabledResult = isEnabled("test", { userId: "user-1" })
 
     return [
@@ -2047,7 +2047,7 @@ function TestSuite__FeaturevisorInstance() as Object
     ]
   end function)
 
-  it("should only remove the specified hook leaving others active", function (_ts as Object) as Object
+  it("should only remove the specified module leaving others active", function (_ts as Object) as Object
     ' Given — feature with two variations
     datafile = {
       schemaVersion: "1",
@@ -2075,15 +2075,15 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — add two hooks: one forces bucket value, another disables the feature
-    addHook({
+    ' When — add two modules: one forces bucket value, another disables the feature
+    addModule({
       name: "forceBucket",
       bucketValue: function (_options as Object) as Integer
         return 1
       end function,
     })
 
-    addHook({
+    addModule({
       name: "disableHook",
       after: function (evaluation as Object, _options as Object) as Object
         evaluation.enabled = false
@@ -2092,13 +2092,13 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    ' Verify both hooks are active
+    ' Verify both modules are active
     disabledResult = isEnabled("test", { userId: "user-1" })
 
-    ' When — remove only the disable hook
-    removeHook("disableHook")
+    ' When — remove only the disable module
+    removeModule("disableHook")
 
-    ' Then — feature is enabled again, but forceBucket hook still forces "control"
+    ' Then — feature is enabled again, but forceBucket module still forces "control"
     return [
       expect(disabledResult).toBeFalse(),
       expect(isEnabled("test", { userId: "user-1" })).toBeTrue(),
@@ -2107,8 +2107,8 @@ function TestSuite__FeaturevisorInstance() as Object
     ]
   end function)
 
-  it("should do nothing when removing a hook name that does not exist", function (_ts as Object) as Object
-    ' Given — feature is enabled, one hook is registered
+  it("should do nothing when removing a module name that does not exist", function (_ts as Object) as Object
+    ' Given — feature is enabled, one module is registered
     datafile = {
       schemaVersion: "1",
       revision: "1",
@@ -2126,7 +2126,7 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    addHook({
+    addModule({
       name: "disableHook",
       after: function (evaluation as Object, _options as Object) as Object
         evaluation.enabled = false
@@ -2135,14 +2135,14 @@ function TestSuite__FeaturevisorInstance() as Object
       end function,
     })
 
-    ' When — attempt to remove a non-existent hook
-    removeHook("nonExistentHook")
+    ' When — attempt to remove a non-existent module
+    removeModule("nonExistentHook")
 
-    ' Then — the existing hook is still active (feature still disabled)
+    ' Then — the existing module is still active (feature still disabled)
     return expect(isEnabled("test", { userId: "user-1" })).toBeFalse()
   end function)
 
-  it("should allow re-adding a hook after it was removed", function (_ts as Object) as Object
+  it("should allow re-adding a module after it was removed", function (_ts as Object) as Object
     ' Given
     datafile = {
       schemaVersion: "1",
@@ -2170,8 +2170,8 @@ function TestSuite__FeaturevisorInstance() as Object
     }
     initialize({ datafile: datafile })
 
-    ' When — add hook that forces bucket to "treatment" range
-    addHook({
+    ' When — add module that forces bucket to "treatment" range
+    addModule({
       name: "forceTreatment",
       bucketValue: function (_options as Object) as Integer
         return 75000
@@ -2180,10 +2180,10 @@ function TestSuite__FeaturevisorInstance() as Object
     resultWithHook = getVariation("test", { userId: "user-1" })
 
     ' Remove it
-    removeHook("forceTreatment")
+    removeModule("forceTreatment")
 
     ' Re-add with different behaviour — forces "control" range
-    addHook({
+    addModule({
       name: "forceTreatment",
       bucketValue: function (_options as Object) as Integer
         return 1
@@ -2198,7 +2198,7 @@ function TestSuite__FeaturevisorInstance() as Object
     ]
   end function)
 
-  it("should apply OverrideOptions sticky per call", function (_ts as Object) as Object
+  it("should replace instance sticky with child sticky for the call and restore it", function (_ts as Object) as Object
     ' Given
     datafile = {
       schemaVersion: "1",
@@ -2220,16 +2220,13 @@ function TestSuite__FeaturevisorInstance() as Object
       attributes: [],
       segments: [],
     }
-    initialize({ datafile: datafile })
-
-    ' The feature is disabled (percentage: 0)
-    ' But with per-call sticky, it should be enabled
-    callSticky = { test: { enabled: true } }
+    initialize({ datafile: datafile, stickyFeatures: { test: { enabled: true } } })
 
     return [
-      expect(isEnabled("test", {})).toBeFalse(),
-      expect(isEnabled("test", {}, { sticky: callSticky })).toBeTrue(),
-      expect(isEnabled("test", {})).toBeFalse(),
+      expect(isEnabled("test", {})).toBeTrue(),
+      expect(isEnabled("test", {}, { "__childSticky": { test: { enabled: false } } })).toBeFalse(),
+      expect(isEnabled("test", {}, { "__childSticky": {} })).toBeFalse(),
+      expect(isEnabled("test", {})).toBeTrue(),
     ]
   end function)
 
@@ -2261,6 +2258,629 @@ function TestSuite__FeaturevisorInstance() as Object
     return expect(true).toBeTrue()
   end function)
 
+  it("should report diagnostics to onDiagnostic handler", function (_ts as Object) as Object
+    ' Given
+    capture = { codes: [] }
+    onDiagnostic = {
+      callback: sub (diagnostic as Object)
+        m.codes.push(diagnostic.code)
+      end sub,
+      context: capture,
+    }
+
+    ' When
+    initialize({
+      datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] },
+      onDiagnostic: onDiagnostic,
+    })
+    isEnabled("missingFeature")
+    setSticky({ foo: { enabled: true } })
+
+    ' Then
+    return [
+      expect(capture.codes).toContain("datafile_set"),
+      expect(capture.codes).toContain("sdk_initialized"),
+      expect(capture.codes).toContain("feature_not_found"),
+      expect(capture.codes).toContain("sticky_set"),
+    ]
+  end function)
+
+  it("should suppress diagnostics below configured logLevel", function (_ts as Object) as String
+    ' Given
+    capture = { codes: [] }
+    onDiagnostic = {
+      callback: sub (diagnostic as Object)
+        m.codes.push(diagnostic.code)
+      end sub,
+      context: capture,
+    }
+
+    ' When
+    initialize({
+      datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] },
+      logLevel: "error",
+      onDiagnostic: onDiagnostic,
+    })
+    isEnabled("missingFeature")
+
+    ' Then
+    return expect(capture.codes).toHaveLength(0)
+  end function)
+
+  it("should emit errored event for error-level diagnostics", function (_ts as Object) as Object
+    ' Given
+    m.__erroredPayload = Invalid
+    m.top.observeFieldScoped("errored", "__callback_onError")
+
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        { key: "test", bucketBy: { bad: true }, traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' When
+    isEnabled("test", { userId: "123" })
+
+    ' Then
+    m.top.unobserveFieldScoped("errored")
+
+    return [
+      expect(m.__erroredPayload).toBeValid(),
+      expect(m.__erroredPayload.diagnostic.code).toBe("invalid_bucket_by"),
+    ]
+  end function)
+
+  it("should include features in stickyChange payload", function (_ts as Object) as Object
+    ' Given
+    m.__stickyChangedPayload = Invalid
+    m.top.observeFieldScoped("stickyChange", "__callback_onStickyChanged")
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When
+    setSticky({ featureA: { enabled: true } })
+    setSticky({ featureB: { enabled: true } })
+
+    ' Then
+    m.top.unobserveFieldScoped("stickyChange")
+
+    return [
+      expect(m.__stickyChangedPayload.features).toContain("featureA"),
+      expect(m.__stickyChangedPayload.features).toContain("featureB"),
+    ]
+  end function)
+
+  it("should merge v2 datafiles by default in setDatafile", function (_ts as Object) as Object
+    ' Given
+    datafileA = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        featureA: { bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+        featureB: { bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+      },
+      attributes: [],
+      segments: {},
+    }
+    datafileB = {
+      schemaVersion: "2",
+      revision: "2",
+      features: {
+        featureB: { bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 0, allocation: [] }] },
+        featureC: { bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+      },
+      attributes: [],
+      segments: {},
+    }
+    initialize({ datafile: datafileA })
+
+    m.__datafileChangedPayload = Invalid
+    m.top.observeFieldScoped("datafileChange", "__callback_onDatafileChanged")
+
+    ' When
+    setDatafile(datafileB)
+
+    ' Then
+    m.top.unobserveFieldScoped("datafileChange")
+
+    return [
+      expect(isEnabled("featureA", { userId: "123" })).toBeTrue(),
+      expect(isEnabled("featureB", { userId: "123" })).toBeFalse(),
+      expect(isEnabled("featureC", { userId: "123" })).toBeTrue(),
+      expect(getRevision()).toBe("2"),
+      expect(m.__datafileChangedPayload.replaced).toBeFalse(),
+    ]
+  end function)
+
+  it("should replace datafile when replace flag is true", function (_ts as Object) as Object
+    ' Given
+    datafileA = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        featureA: { bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+      },
+      attributes: [],
+      segments: {},
+    }
+    datafileB = {
+      schemaVersion: "2",
+      revision: "2",
+      features: {
+        featureB: { bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+      },
+      attributes: [],
+      segments: {},
+    }
+    initialize({ datafile: datafileA })
+
+    m.__datafileChangedPayload = Invalid
+    m.top.observeFieldScoped("datafileChange", "__callback_onDatafileChanged")
+
+    ' When
+    setDatafile(datafileB, true)
+
+    ' Then
+    m.top.unobserveFieldScoped("datafileChange")
+
+    return [
+      expect(getFeature("featureA")).toBeInvalid(),
+      expect(isEnabled("featureB", { userId: "123" })).toBeTrue(),
+      expect(m.__datafileChangedPayload.replaced).toBeTrue(),
+    ]
+  end function)
+
+  it("should replace instead of merge when either datafile is v1 array-shaped", function (_ts as Object) as Object
+    ' Given
+    datafileA = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        featureA: { bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+      },
+      attributes: [],
+      segments: {},
+    }
+    datafileB = {
+      schemaVersion: "1",
+      revision: "2",
+      features: [
+        { key: "featureC", bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }] },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafileA })
+
+    ' When
+    setDatafile(datafileB)
+
+    ' Then
+    return [
+      expect(getFeature("featureA")).toBeInvalid(),
+      expect(isEnabled("featureC", { userId: "123" })).toBeTrue(),
+    ]
+  end function)
+
+  it("should return typed variable values with strict type checks", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "2",
+      revision: "1",
+      features: {
+        test: {
+          bucketBy: "userId",
+          variablesSchema: {
+            count: { type: "integer", defaultValue: 5 },
+            countFromString: { type: "integer", defaultValue: "5" },
+            countFromFloat: { type: "integer", defaultValue: 6.0 },
+            countFromFraction: { type: "integer", defaultValue: 5.5 },
+            ratio: { type: "double", defaultValue: 2.5 },
+            ratioFromInteger: { type: "double", defaultValue: 2 },
+            ratioFromString: { type: "double", defaultValue: "2.5" },
+            flag: { type: "boolean", defaultValue: true },
+            flagFromString: { type: "boolean", defaultValue: "true" },
+            config: { type: "object", defaultValue: { color: "red" } },
+            configFromArray: { type: "object", defaultValue: ["red"] },
+          },
+          traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }],
+        },
+      },
+      attributes: [],
+      segments: {},
+    }
+    initialize({ datafile: datafile })
+    context = { userId: "123" }
+
+    ' Then
+    return [
+      expect(getVariableInteger("test", "count", context)).toBe(5),
+      expect(getVariableInteger("test", "countFromString", context)).toBeInvalid(),
+      expect(getVariableInteger("test", "countFromFloat", context)).toBe(6),
+      expect(getVariableInteger("test", "countFromFraction", context)).toBeInvalid(),
+      expect(getVariableDouble("test", "ratio", context)).toBe(2.5),
+      expect(getVariableDouble("test", "ratioFromInteger", context)).toBe(2),
+      expect(getVariableDouble("test", "ratioFromString", context)).toBeInvalid(),
+      expect(getVariableBoolean("test", "flag", context)).toBeTrue(),
+      expect(getVariableBoolean("test", "flagFromString", context)).toBeInvalid(),
+      expect(getVariableObject("test", "config", context)).toEqual({ color: "red" }),
+      expect(getVariableObject("test", "configFromArray", context)).toBeInvalid(),
+    ]
+  end function)
+
+  it("should apply default values before after modules run", function (_ts as Object) as Object
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    capture = {}
+    addModule({
+      name: "captureHook",
+      context: capture,
+      after: function (evaluation as Object, _options as Object) as Object
+        if (evaluation.variationValue <> Invalid) then m.variationValue = evaluation.variationValue
+        if (evaluation.variableValue <> Invalid) then m.variableValue = evaluation.variableValue
+
+        return evaluation
+      end function,
+    })
+
+    ' When
+    getVariation("missingFeature", {}, { defaultVariationValue: "fallback" })
+    getVariable("missingFeature", "color", {}, { defaultVariableValue: "orange" })
+
+    ' Then
+    return [
+      expect(capture.variationValue).toBe("fallback"),
+      expect(capture.variableValue).toBe("orange"),
+    ]
+  end function)
+
+  it("should not apply defaultVariationValue when variation matched", function (_ts as Object) as String
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [
+            {
+              key: "1",
+              segments: "*",
+              percentage: 100000,
+              allocation: [{ variation: "control", range: [0, 100000] }],
+            },
+          ],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+
+    ' When / Then
+    return expect(getVariation("test", { userId: "123" }, { defaultVariationValue: "fallback" })).toBe("control")
+  end function)
+
+  it("should honor options in typed variable getters", function (_ts as Object) as String
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When / Then
+    return expect(getVariableString("missingFeature", "color", {}, { defaultVariableValue: "orange" })).toBe("orange")
+  end function)
+
+  it("should expose datafile accessors for v1 datafile", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1.0",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          variablesSchema: [{ key: "color", type: "string", defaultValue: "red" }],
+          variations: [{ value: "control" }, { value: "treatment" }],
+          traffic: [],
+        },
+      ],
+      attributes: [],
+      segments: [{ key: "netherlands", conditions: FormatJson([{ attribute: "country", operator: "equals", value: "nl" }]) }],
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return [
+      expect(getSchemaVersion()).toBe("1"),
+      expect(getFeatureKeys()).toEqual(["test"]),
+      expect(getVariableKeys("test")).toEqual(["color"]),
+      expect(hasVariations("test")).toBeTrue(),
+      expect(hasVariations("missingFeature")).toBeFalse(),
+      expect(getSegment("netherlands").conditions).toEqual([{ attribute: "country", operator: "equals", value: "nl" }]),
+      expect(getSegment("missingSegment")).toBeInvalid(),
+    ]
+  end function)
+
+  it("should expose datafile accessors for v2 datafile", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "2",
+      revision: "2.0",
+      features: {
+        test: {
+          bucketBy: "userId",
+          variablesSchema: { color: { type: "string", defaultValue: "red" } },
+          traffic: [],
+        },
+      },
+      attributes: [],
+      segments: {
+        netherlands: { conditions: [{ attribute: "country", operator: "equals", value: "nl" }] },
+      },
+    }
+
+    ' When
+    initialize({ datafile: datafile })
+
+    ' Then
+    return [
+      expect(getSchemaVersion()).toBe("2"),
+      expect(getFeatureKeys()).toEqual(["test"]),
+      expect(getVariableKeys("test")).toEqual(["color"]),
+      expect(hasVariations("test")).toBeFalse(),
+      expect(getVariableKeys("missingFeature")).toEqual([]),
+      expect(getSegment("netherlands").conditions).toEqual([{ attribute: "country", operator: "equals", value: "nl" }]),
+    ]
+  end function)
+
+  it("should initialize sticky from options.sticky with priority over stickyFeatures", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        { key: "test", bucketBy: "userId", traffic: [{ key: "1", segments: "*", percentage: 0, allocation: [] }] },
+      ],
+      attributes: [],
+      segments: [],
+    }
+
+    ' When
+    initialize({
+      datafile: datafile,
+      sticky: { test: { enabled: true } },
+      stickyFeatures: { test: { enabled: false } },
+    })
+
+    ' Then
+    return [
+      expect(isEnabled("test", { userId: "123" })).toBeTrue(),
+      expect(evaluateFlag("test", { userId: "123" }).reason).toBe("sticky"),
+    ]
+  end function)
+
+  it("should return module id from addModule and generate ids for unnamed modules", function (_ts as Object) as Object
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+
+    ' When
+    namedId = addModule({ name: "named" })
+    unnamedId1 = addModule({})
+    unnamedId2 = addModule({})
+    duplicateId = addModule({ name: "named" })
+
+    ' Then
+    return [
+      expect(namedId).toBe("named"),
+      expect(unnamedId1 <> "").toBeTrue(),
+      expect(unnamedId2 <> "").toBeTrue(),
+      expect(unnamedId1 <> unnamedId2).toBeTrue(),
+      expect(duplicateId).toBe(""),
+    ]
+  end function)
+
+  it("should call module setup with api exposing getRevision", function (_ts as Object) as String
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1.2.3", features: [], attributes: [], segments: [] } })
+    capture = {}
+
+    ' When
+    addModule({
+      name: "setupModule",
+      context: capture,
+      setup: sub (api as Object)
+        m.revision = api.getRevision()
+      end sub,
+    })
+
+    ' Then
+    return expect(capture.revision).toBe("1.2.3")
+  end function)
+
+  it("should not register module when setup throws", function (_ts as Object) as Object
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+    capture = { closed: false }
+
+    ' When
+    moduleId = addModule({
+      name: "failingModule",
+      context: capture,
+      setup: sub (_api as Object)
+        throw "setup failed"
+      end sub,
+      after: function (evaluation as Object, _options as Object) as Object
+        evaluation.enabled = true
+
+        return evaluation
+      end function,
+      close: sub ()
+        m.closed = true
+      end sub,
+    })
+
+    ' Then — module not added, its after never runs, close was called
+    return [
+      expect(moduleId).toBe(""),
+      expect(isEnabled("missingFeature")).toBeFalse(),
+      expect(capture.closed).toBeTrue(),
+    ]
+  end function)
+
+  it("should call module close on removeModule and on instance close", function (_ts as Object) as Object
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+    capture = { closedCount: 0 }
+    module = {
+      name: "closableModule",
+      context: capture,
+      close: sub ()
+        m.closedCount++
+      end sub,
+    }
+
+    ' When
+    addModule(module)
+    removeModule("closableModule")
+
+    addModule(module)
+    close()
+
+    ' Then
+    return expect(capture.closedCount).toBe(2)
+  end function)
+
+  it("should report module_close_error when module close throws", function (_ts as Object) as Object
+    ' Given
+    capture = { codes: [] }
+    onDiagnostic = {
+      callback: sub (diagnostic as Object)
+        m.codes.push(diagnostic.code)
+      end sub,
+      context: capture,
+    }
+    initialize({
+      datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] },
+      onDiagnostic: onDiagnostic,
+    })
+
+    addModule({
+      name: "brokenClose",
+      close: sub ()
+        throw "close failed"
+      end sub,
+    })
+
+    ' When
+    removeModule("brokenClose")
+
+    ' Then
+    return expect(capture.codes).toContain("module_close_error")
+  end function)
+
+  it("should pass featureKey and bucketBy to bucketKey and bucketValue modules", function (_ts as Object) as Object
+    ' Given
+    datafile = {
+      schemaVersion: "1",
+      revision: "1",
+      features: [
+        {
+          key: "test",
+          bucketBy: "userId",
+          traffic: [{ key: "1", segments: "*", percentage: 100000, allocation: [] }],
+        },
+      ],
+      attributes: [],
+      segments: [],
+    }
+    initialize({ datafile: datafile })
+    capture = {}
+
+    addModule({
+      name: "captureBucketArgs",
+      context: capture,
+      bucketKey: function (options as Object) as String
+        m.bucketKeyOptions = options
+
+        return options.bucketKey
+      end function,
+      bucketValue: function (options as Object) as Integer
+        m.bucketValueOptions = options
+
+        return options.bucketValue
+      end function,
+    })
+
+    ' When
+    isEnabled("test", { userId: "123" })
+
+    ' Then
+    return [
+      expect(capture.bucketKeyOptions.featureKey).toBe("test"),
+      expect(capture.bucketKeyOptions.bucketBy).toBe("userId"),
+      expect(capture.bucketValueOptions.featureKey).toBe("test"),
+      expect(capture.bucketValueOptions.bucketBy).toBe("userId"),
+    ]
+  end function)
+
+  it("should deliver instance diagnostics to module onDiagnostic subscriptions but not its own reports", function (_ts as Object) as Object
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+    capture = { codes: [], moduleApi: Invalid }
+
+    addModule({
+      name: "observerModule",
+      context: capture,
+      setup: sub (api as Object)
+        m.moduleApi = api
+        api.onDiagnostic(sub (diagnostic as Object)
+          m.codes.push(diagnostic.code)
+        end sub, { context: m, logLevel: "warn" })
+      end sub,
+    })
+
+    ' When — instance-level warn is delivered, own report is not
+    isEnabled("missingFeature")
+    capture.moduleApi.reportDiagnostic({ level: "warn", code: "own_report", message: "own report" })
+
+    ' Then
+    return [
+      expect(capture.codes).toContain("feature_not_found"),
+      expect(capture.codes).not.toContain("own_report"),
+    ]
+  end function)
+
+  it("should stop delivering diagnostics after subscription unsubscribe", function (_ts as Object) as String
+    ' Given
+    initialize({ datafile: { schemaVersion: "1", revision: "1", features: [], attributes: [], segments: [] } })
+    capture = { codes: [], subscription: Invalid }
+
+    addModule({
+      name: "unsubscribingModule",
+      context: capture,
+      setup: sub (api as Object)
+        m.subscription = api.onDiagnostic(sub (diagnostic as Object)
+          m.codes.push(diagnostic.code)
+        end sub, { context: m, logLevel: "warn" })
+      end sub,
+    })
+
+    ' When
+    capture.subscription.unsubscribe()
+    isEnabled("missingFeature")
+
+    ' Then
+    return expect(capture.codes).toHaveLength(0)
+  end function)
+
   return ts
 end function
 
@@ -2274,6 +2894,10 @@ end sub
 
 sub __callback_onDatafileChanged()
   m.__datafileChangedPayload = m.top.datafileChange
+end sub
+
+sub __callback_onError()
+  m.__erroredPayload = m.top.errored
 end sub
 
 sub __callback_onReady()
