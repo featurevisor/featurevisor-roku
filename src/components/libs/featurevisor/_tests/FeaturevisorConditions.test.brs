@@ -372,6 +372,32 @@ function TestSuite__FeaturevisorConditions() as Object
     return expect(result).toBeTrue()
   end function)
 
+  it("NOT condition - should not match with empty NOT array", function (_ts as Object) as String
+    ' When
+    result = featurevisorAllConditionsAreMatched([{ "not": [] }], { browser_type: "chrome" })
+
+    ' Then
+    return expect(result).toBeFalse()
+  end function)
+
+  it("NOT condition - should not match when all conditions inside NOT are matched", function (_ts as Object) as String
+    ' Given
+    conditions = [
+      {
+        "not": [
+          { attribute: "browser_type", operator: "equals", value: "chrome" },
+          { attribute: "browser_version", operator: "equals", value: "1.0" },
+        ],
+      },
+    ]
+
+    ' When
+    result = featurevisorAllConditionsAreMatched(conditions, { browser_type: "chrome", browser_version: "1.0" })
+
+    ' Then
+    return expect(result).toBeFalse()
+  end function)
+
   testEach([
     {
       conditions: [

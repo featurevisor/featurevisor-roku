@@ -57,18 +57,24 @@ npm test              # all tests must pass
 
 ## Intentional divergences from the JS SDK
 
-These features exist in the Roku SDK but were removed from JS SDK v2. Keep them — they are valid Roku platform requirements:
+The SDK matches JS SDK v3. These divergences are intentional — keep them:
 
-| Feature | Why we keep it |
+| Divergence | Why |
 |---------|---------------|
+| v1 (array-shaped) datafile support kept | JS v3 dropped v1 datafiles; Roku stays additive and supports v1 + v2 in the same binary. `setDatafile` merge is v2-only — v1 on either side forces replace |
 | `datafileUrl` option + HTTP fetch on init | Roku apps need to fetch the datafile themselves; no fetch API outside the SDK |
 | `refreshInterval` + `startRefreshing()` / `stopRefreshing()` | TV apps need periodic polling; no background threads |
 | `refresh()` manual refresh | Caller-driven refresh on app resume |
-| `onReady` / `onRefresh` / `onUpdate` callbacks (SGNode events `ready` / `refreshed` / `updated`) | Roku event model uses field observers, not Promises |
+| `onReady` / `onRefresh` / `onUpdate` / `onError` callbacks (SGNode events `ready` / `refreshed` / `updated` / `errored`) | Roku event model uses field observers, not Promises/EventEmitter |
 | `activate()` method | Experiment activation tracking is useful for analytics |
-| `interceptContext` / `configureBucketKey` / `configureBucketValue` callbacks | Legacy callbacks kept alongside the new hooks system for backward compat |
+| `interceptContext` / `configureBucketKey` / `configureBucketValue` callbacks | Legacy callbacks kept alongside the modules system for backward compat |
 | `initialFeatures` option | Before datafile loads, return known defaults |
-| `spawn()` / child instances | No concrete Roku use case; deferred — requires OverrideOptions per-call sticky to be useful |
+| Synchronous module `close()` / `removeModule` | JS is async (Promises); BrightScript has none |
+| `addModule` returns an id string; module `api.onDiagnostic` returns `{ unsubscribe }` object | No closures in BrightScript; JS returns unsubscribe functions |
+| `OVERRIDE` (`"override"`) reason on rule-level enabled overrides | JS uses `"rule"`; pre-existing divergence kept for backward compat |
+| `spawn()` child lives in `FeaturevisorSDK.brs` (wrapper side) | Evaluation happens in an SGNode; the child passes context + sticky per call via the internal `__childSticky` option |
+
+Deprecated v1-era aliases that must keep working: `createInstance` (→ `createFeaturevisor`), `options.stickyFeatures` (→ `options.sticky`), `setStickyFeatures` (→ `setSticky`). The v2-only APIs (hooks, `logger` option, per-call `options.sticky`) were removed in 3.0.0.
 
 ---
 
@@ -76,10 +82,10 @@ These features exist in the Roku SDK but were removed from JS SDK v2. Keep them 
 
 | File | Responsibility |
 |------|---------------|
-| `FeaturevisorSDK.brs` | Public API factory — thin wrapper over the SGNode instance |
-| `Featurevisor.instance.brs` | Core evaluation engine (`evaluateFlag`, `evaluateVariation`, `evaluateVariable`, context, sticky, bucketing) |
-| `FeaturevisorHooks.brs` | Hooks manager — `add`, `remove`, `getAll` for `before`/`after`/`bucketKey`/`bucketValue` hooks |
-| `Featurevisor.instance.xml` | SGNode definition (fields: `ready`, `activated`, `refreshed`, `updated`) |
+| `FeaturevisorSDK.brs` | Public API factory — thin wrapper over the SGNode instance; also hosts the `spawn()` child builder |
+| `Featurevisor.instance.brs` | Core evaluation engine (`evaluateFlag`, `evaluateVariation`, `evaluateVariable`, context, sticky, bucketing, modules lifecycle) |
+| `FeaturevisorModules.brs` | Modules manager — ordered `add`/`remove`/`getAll`; module shape: `name?`, `setup?`, `before?`, `after?`, `bucketKey?`, `bucketValue?`, `close?`, `context?` |
+| `Featurevisor.instance.xml` | SGNode definition (fields: `ready`, `activated`, `refreshed`, `updated`, `errored`, `contextChange`, `datafileChange`, `stickyChange`) |
 | `Featurevisor.request.brs` | HTTP task for datafile fetch (uses createRequest) |
 | `FeaturevisorDatafileReader.brs` | Datafile accessor — handles both v1 (array) and v2 (dict) for features/segments |
 | `FeaturevisorConditions.brs` | Condition matching (all operators, AND/OR/NOT logic) |
@@ -87,7 +93,7 @@ These features exist in the Roku SDK but were removed from JS SDK v2. Keep them 
 | `FeaturevisorSegments.brs` | Segment matching helpers |
 | `FeaturevisorBucket.brs` | Bucket key generation and MurmurHash normalisation |
 | `FeaturevisorEvaluationReason.const.brs` | Evaluation reason string constants |
-| `FeaturevisorLogger.brs` | Logger wrapper (level-based, delegates to caller-provided function) |
+| `FeaturevisorDiagnostics.brs` | Diagnostics reporter — `logLevel` threshold, `onDiagnostic` handler, module subscriptions, `errored` event on error-level diagnostics |
 
 ---
 
@@ -231,19 +237,19 @@ Keep in sync with `FeaturevisorEvaluationReason.const.brs`:
 | Constant | Value | When used |
 |----------|-------|-----------|
 | `ALLOCATED` | `"allocated"` | Bucket value falls within allocation range |
-| `DEFAULTED` | `"defaulted"` | Variable falls back to `defaultValue` (or `useDefaultWhenDisabled`) |
 | `DISABLED` | `"disabled"` | Feature is disabled |
 | `ERROR` | `"error"` | Caught exception |
+| `FEATURE_NOT_FOUND` | `"feature_not_found"` | Feature not in datafile |
 | `FORCED` | `"forced"` | Force rule matched |
 | `INITIAL` | `"initial"` | Roku-specific: returned from `initialFeatures` before datafile loads |
 | `NO_MATCH` | `"no_match"` | No traffic rule segment matched |
 | `NO_VARIATIONS` | `"no_variations"` | Feature has no variations |
-| `NOT_FOUND` | `"not_found"` | Feature not in datafile |
 | `OUT_OF_RANGE` | `"out_of_range"` | Bucket value outside all mutex-group ranges |
-| `OVERRIDE` | `"override"` | Traffic rule has explicit `enabled` override |
+| `OVERRIDE` | `"override"` | Traffic rule has explicit `enabled` override (JS uses `"rule"` — kept divergence) |
 | `REQUIRED` | `"required"` | A required feature is not enabled |
 | `RULE` | `"rule"` | Traffic rule matched and bucket value within percentage |
-| `STICKY` | `"sticky"` | Value comes from `stickyFeatures` |
+| `STICKY` | `"sticky"` | Value comes from sticky features |
+| `VARIABLE_DEFAULT` | `"variable_default"` | Variable falls back to `defaultValue` (or `useDefaultWhenDisabled`) |
 | `VARIABLE_DISABLED` | `"variable_disabled"` | Variable has `disabledValue` and feature is disabled |
 | `VARIABLE_NOT_FOUND` | `"variable_not_found"` | Variable key not in feature's `variablesSchema` |
 | `VARIABLE_OVERRIDE_RULE` | `"variable_override_rule"` | Variable value from traffic rule override |

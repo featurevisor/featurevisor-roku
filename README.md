@@ -70,13 +70,15 @@ Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sd
   - [`initialFeatures`](#initialfeatures)
   - [`interceptContext`](#interceptcontext)
   - [`logLevel`](#loglevel)
-  - [`logger`](#logger)
+  - [`modules`](#modules)
   - [`onActivation`](#onactivation)
+  - [`onDiagnostic`](#ondiagnostic)
+  - [`onError`](#onerror)
   - [`onReady`](#onready)
   - [`onRefresh`](#onrefresh)
   - [`onUpdate`](#onupdate)
   - [`refreshInterval`](#refreshinterval)
-  - [`stickyFeatures`](#stickyfeatures)
+  - [`sticky`](#sticky)
 - [API](#api)
   - [`f.isEnabled`](#fisenabled)
   - [`f.getVariation`](#fgetvariation)
@@ -87,9 +89,18 @@ Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sd
   - [`f.evaluateVariation`](#fevaluatevariation)
   - [`f.evaluateVariable`](#fevaluatevariable)
   - [`f.getFeature`](#fgetfeature)
+  - [`f.getFeatureKeys`](#fgetfeaturekeys)
+  - [`f.getSchemaVersion`](#fgetschemaversion)
+  - [`f.getSegment`](#fgetsegment)
+  - [`f.getVariableKeys`](#fgetvariablekeys)
+  - [`f.hasVariations`](#fhasvariations)
   - [`f.getContext`](#fgetcontext)
   - [`f.setContext`](#fsetcontext)
+  - [`f.addModule`](#faddmodule)
+  - [`f.removeModule`](#fremovemodule)
+  - [`f.spawn`](#fspawn)
   - [`f.onActivation`](#fonactivation)
+  - [`f.onError`](#fonerror)
   - [`f.onReady`](#fonready)
   - [`f.onRefresh`](#fonrefresh)
   - [`f.onUpdate`](#fonupdate)
@@ -103,6 +114,7 @@ Visit [https://featurevisor.com/docs/sdks/roku](https://featurevisor.com/docs/sd
   - [`f.startRefreshing`](#fstartrefreshing)
   - [`f.stopRefreshing`](#fstoprefreshing)
 - [Evaluation object](#evaluation-object)
+- [Migrating from v2](#migrating-from-v2)
 - [Differences from the JS SDK](#differences-from-the-js-sdk)
 
 ## Installation
@@ -121,11 +133,13 @@ For example, in the new `MyFeaturevisorNode` created:
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     datafileUrl: "<featurevisor-datafile-url>",
   })
 end sub
 ```
+
+`createInstance` is kept as a deprecated alias of `createFeaturevisor`.
 
 You can also pass an existing instance to SDK, to not create a new instance, but to use an existing one to use FeaturevisorSDK methods that are invoked on it.
 
@@ -134,7 +148,7 @@ You can also pass an existing instance to SDK, to not create a new instance, but
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     ' options from an existing instance are kept but could be overridden
   }, existingInstance)
 end sub
@@ -170,7 +184,7 @@ Use it to take over bucketing key generation process.
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     configureBucketKey: function (feature as Dynamic, context as Object, bucketKey as String) as String
       return bucketKey
     end function,
@@ -190,7 +204,7 @@ Use it to take over bucketing process.
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     configureBucketValue: function (feature as Dynamic, context as Object, bucketValue as String) as Integer
       return bucketValue ' 0 to 100000
     end function,
@@ -210,7 +224,7 @@ Set a persistent instance-level context that is automatically merged with per-ca
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     datafileUrl: "<featurevisor-datafile-url>",
     context: {
       userId: "user-123",
@@ -246,7 +260,7 @@ Pass set of initial features with their variation and (optional) variables that 
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     initialFeatures: {
       myFeatureKey: {
         enabled: true,
@@ -280,7 +294,7 @@ sub init()
     timezone: "America/New_York",
   }
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     configureAndInterceptStaticContext: defaultContext,
     interceptContext: function (context as Object) as Object
       joinedContext = {}
@@ -300,28 +314,51 @@ end sub
 - Default: `"info"`
 - Allowed values: `"debug"` | `"info"` | `"warn"` | `"error"` | `"fatal"`
 
-Controls the minimum severity of log messages printed by the SDK.
+Controls the minimum severity of diagnostics that reach `onDiagnostic` (or the default `print`-based output).
 
 ```brightscript
-f.createInstance({
+f.createFeaturevisor({
   datafileUrl: "<featurevisor-datafile-url>",
   logLevel: "debug",
 })
 ```
 
-### `logger`
+### `modules`
 
-- Type: `function`
+- Type: `array` of module associativeArrays
 - Required: no
 
-Custom log handler. Receives `level` (string), `message` (string), and `details` (associativeArray). When provided, replaces the default `print`-based output.
+Modules extend the SDK. A module can intercept evaluations (`before`, `after`), take over bucketing (`bucketKey`, `bucketValue`), and run lifecycle callbacks (`setup`, `close`). All fields are optional; `name` is needed only if you want to remove the module by name later or guard against duplicates.
 
 ```brightscript
-f.createInstance({
+f.createFeaturevisor({
   datafileUrl: "<featurevisor-datafile-url>",
-  logger: function (level as String, message as String, details as Object)
-    print "[MyApp] [";level;"] ";message
-  end function,
+  modules: [
+    {
+      name: "my-module",
+      context: {}, ' optional, accessible via `m` in the callbacks below
+      setup: sub (api as Object)
+        ' api.getRevision() as String
+        ' api.onDiagnostic(handler, { context?: aa, logLevel?: string }) returns { unsubscribe }
+        ' api.reportDiagnostic({ level, code, message, details? })
+      end sub,
+      before: function (options as Object) as Object
+        return options ' { featureKey, context }
+      end function,
+      bucketKey: function (options as Object) as String
+        return options.bucketKey ' { feature, featureKey, bucketBy, context, bucketKey }
+      end function,
+      bucketValue: function (options as Object) as Integer
+        return options.bucketValue ' { feature, featureKey, bucketBy, context, bucketValue }
+      end function,
+      after: function (evaluation as Object, options as Object) as Object
+        return evaluation
+      end function,
+      close: sub ()
+        ' clean up (called synchronously)
+      end sub,
+    },
+  ],
 })
 ```
 
@@ -338,7 +375,7 @@ Capture activated features along with their evaluated variation:
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     onActivation: {
       callback: sub (data as Object)
         ' feature has been activated
@@ -358,6 +395,47 @@ end sub
 
 `captureContext` will only contain attributes that are marked as `capture: true` in the Attributes' YAML files.
 
+### `onDiagnostic`
+
+- Type: `function` or `associativeArray` with `{ callback: function, context?: associativeArray }`
+- Required: no
+
+Structured diagnostics handler replacing the removed `logger` option. Receives a diagnostic associativeArray: `{ level, code, message, details, module? }`. Only diagnostics passing the `logLevel` threshold are delivered; without a handler they are printed.
+
+```brightscript
+f.createFeaturevisor({
+  datafileUrl: "<featurevisor-datafile-url>",
+  onDiagnostic: {
+    callback: sub (diagnostic as Object)
+      ' send to observability: diagnostic.level, diagnostic.code, diagnostic.message
+    end sub,
+    context: {}, ' optional context for the callback
+  },
+})
+```
+
+Known diagnostic codes include: `sdk_initialized`, `datafile_set`, `context_set`, `sticky_set`, `invalid_datafile`, `duplicate_module`, `module_setup_error`, `module_close_error`, `evaluation_error`, `invalid_bucket_by`, `feature_not_found`, `deprecated_feature`, `variable_not_found`, `deprecated_variable`, `no_variations`, plus Roku-specific `initialization_error`, `datafile_fetch_error`, `refresh_in_progress`, `refresh_already_started`, `refresh_not_configured`.
+
+### `onError`
+
+- Type: `associativeArray`
+- Required: no
+- Structure: `{ callback: function, context?: associativeArray }`
+
+Triggered on every error-level diagnostic, regardless of `logLevel`. The payload is `{ diagnostic }`.
+
+```brightscript
+f.createFeaturevisor({
+  datafileUrl: "<featurevisor-datafile-url>",
+  onError: {
+    callback: sub (payload as Object)
+      ' payload.diagnostic.code, payload.diagnostic.message
+    end sub,
+    context: {}, ' optional context for the callback
+  },
+})
+```
+
 ### `onReady`
 
 - Type: `associativeArray`
@@ -371,7 +449,7 @@ Triggered maximum once when the SDK is ready to be used.
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     onReady: {
       callback: sub ()
         ' agent has been createInstanced and it is ready
@@ -397,7 +475,7 @@ Works only when `datafileUrl` and `refreshInterval` are set.
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     onRefresh: {
       callback: sub ()
         ' datafile has been refreshed
@@ -423,7 +501,7 @@ Works only when `datafileUrl` and `refreshInterval` are set.
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     onUpdate: {
       callback: sub ()
         ' datafile has been updated (the revision has changed)
@@ -446,14 +524,14 @@ Set the interval grater than zero to refresh the datafile.
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
+  f.createFeaturevisor({
     datafileUrl: "<featurevisor-datafile-url>",
     refreshInterval: 60 * 5, ' every 5 minutes
   })
 end sub
 ```
 
-### `stickyFeatures`
+### `sticky`
 
 - Type: `associativeArray`
 - Required: no
@@ -462,13 +540,15 @@ If set, the SDK will skip evaluating the datafile and return variation and varia
 
 If a feature key is not present in this object, the SDK will continue to evaluate the datafile.
 
+The `stickyFeatures` option name is kept as a deprecated alias.
+
 ```brightscript
 ' @import /components/libs/featurevisor/FeaturevisorSDK.brs from @featurevisor/roku
 
 sub init()
   f = FeaturevisorSDK()
-  f.createInstance({
-    stickyFeatures: {
+  f.createFeaturevisor({
+    sticky: {
       myFeatureKey: {
         enabled: true,
 
@@ -485,33 +565,35 @@ end sub
 
 ## API
 
+All evaluation methods accept an optional `options` associativeArray with: `defaultVariationValue` and `defaultVariableValue` (fallback values applied when nothing matched).
+
 ### `f.isEnabled`
 
 Check if a feature is enabled or not.
 
-> `f.isEnabled(featureKey as String, context = {} as Object) as Boolean`
+> `f.isEnabled(featureKey as String, context = {} as Object, options = {} as Object) as Boolean`
 
 ### `f.getVariation`
 
 Get feature variation.
 
-> `f.getVariation(feature as Dynamic, context = {} as Object) as Dynamic`
+> `f.getVariation(feature as Dynamic, context = {} as Object, options = {} as Object) as Dynamic`
 
 ### `f.getVariable`
 
 Get feature variable.
 
-> `f.getVariable(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+> `f.getVariable(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
 
-Also supports additional type specific methods, returns the value of the desired type, or Invalid if the value does not exist or it does not have a desired type:
+Also supports additional type specific methods, returns the value of the desired type, or Invalid if the value does not exist or it does not have a desired type (no coercion is performed: strings are never converted to numbers or booleans, arrays are not accepted as objects, and floats are accepted as integers only when they have no fractional part):
 
-- `f.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `f.getVariableString(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `f.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `f.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `f.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `f.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
-- `f.getVariableJSON(feature as Dynamic, variableKey as String, context = {} as Object) as Dynamic`
+- `f.getVariableBoolean(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
+- `f.getVariableString(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
+- `f.getVariableInteger(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
+- `f.getVariableDouble(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
+- `f.getVariableArray(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
+- `f.getVariableObject(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
+- `f.getVariableJSON(feature as Dynamic, variableKey as String, context = {} as Object, options = {} as Object) as Dynamic`
 
 ### `f.activate`
 
@@ -525,7 +607,7 @@ This is a convenience method meant to be called when you know the User has been 
 
 Evaluate all features (or a specified subset) at once and return an associativeArray keyed by feature key.
 
-> `f.getAllEvaluations(context = {} as Object, featureKeys = [] as Object) as Object`
+> `f.getAllEvaluations(context = {} as Object, featureKeys = [] as Object, options = {} as Object) as Object`
 
 Each entry contains:
 - `enabled` (Boolean) — whether the feature is enabled
@@ -588,6 +670,36 @@ Returns the raw feature definition object from the datafile, or `Invalid` if the
 
 > `f.getFeature(feature as Dynamic) as Object`
 
+### `f.getFeatureKeys`
+
+Returns all feature keys present in the datafile.
+
+> `f.getFeatureKeys() as Object`
+
+### `f.getSchemaVersion`
+
+Returns the datafile schema version.
+
+> `f.getSchemaVersion() as String`
+
+### `f.getSegment`
+
+Returns the raw segment definition (with conditions parsed if stringified), or `Invalid` if not found.
+
+> `f.getSegment(segmentKey as String) as Object`
+
+### `f.getVariableKeys`
+
+Returns all variable keys defined in a feature's variables schema.
+
+> `f.getVariableKeys(featureKey as String) as Object`
+
+### `f.hasVariations`
+
+Checks whether a feature has any variations defined.
+
+> `f.hasVariations(featureKey as String) as Boolean`
+
 ### `f.getContext`
 
 Returns the merged context (instance-level context + per-call context).
@@ -614,11 +726,50 @@ f.setContext({ userId: "user-123", country: "nl" })
 f.setContext({ userId: "user-456" }, true)
 ```
 
+### `f.addModule`
+
+Registers a module (see the [`modules`](#modules) option for the module shape) and calls its `setup` callback. Returns the module id — the module's `name`, or a generated id for unnamed modules — or an empty string when a named module with the same name already exists (a `duplicate_module` diagnostic is reported) or when `setup` throws.
+
+> `f.addModule(module as Object) as String`
+
+### `f.removeModule`
+
+Removes module(s) by name or by the id returned from `addModule`, calling their `close` callbacks synchronously. Unnamed modules can only be removed via their returned id.
+
+> `f.removeModule(nameOrId as String)`
+
+### `f.spawn`
+
+Creates a child instance: a plain object with its own context and sticky features that delegates evaluation to the parent instance. Child context is merged over parent context; child sticky fully replaces the parent's sticky for the child's evaluations (even when empty).
+
+> `f.spawn(context = {} as Object, options = {} as Object) as Object`
+
+`options` supports `sticky` (associativeArray of sticky features scoped to the child).
+
+```brightscript
+child = f.spawn({ userId: "profile-2" }, { sticky: { myFeature: { enabled: true } } })
+
+child.isEnabled("myFeature")
+child.setContext({ country: "nl" })       ' local to the child, parent unaffected
+child.setSticky({ other: { enabled: true } })
+child.onContextChanged(sub (payload as Object) : end sub)
+child.onStickyChanged(sub (payload as Object) : end sub)
+child.close()
+```
+
+The child exposes: `isEnabled`, `getVariation`, `getVariable` (+ all typed getters), `getAllEvaluations`, `getContext`, `setContext`, `setSticky`, `onContextChanged`, `onStickyChanged`, and `close`.
+
 ### `f.onActivation`
 
 Adds on activation callback which will be called after an feature activation.
 
 > `f.onActivation(func as Function, context = Invalid as Object)`
+
+### `f.onError`
+
+Adds a callback fired on every error-level diagnostic. The payload is `{ diagnostic }`.
+
+> `f.onError(func as Function, context = Invalid as Object)`
 
 ### `f.onReady`
 
@@ -666,9 +817,9 @@ Manually refresh datafile.
 
 ### `f.setDatafile`
 
-Set datafile manually.
+Set datafile manually. By default the new datafile is merged into the current one: `revision` and `schemaVersion` are taken from the incoming datafile, and its features/segments overwrite same-key entries while entries only present in the current datafile are kept. Pass `replace = true` to replace the datafile entirely. Merging only applies when both datafiles use the v2 (dictionary) shape — v1 (array) datafiles always replace.
 
-> `f.setDatafile(datafile as Object)`
+> `f.setDatafile(datafile as Object, replace = false as Boolean)`
 
 ### `f.setSticky`
 
@@ -731,7 +882,6 @@ The `evaluateFlag`, `evaluateVariation`, and `evaluateVariable` methods return a
 | Reason                       | Description                                                        |
 | ---------------------------- | ------------------------------------------------------------------ |
 | `"allocated"`                | Regular bucketing allocation matched                               |
-| `"defaulted"`                | Variable default value used (e.g. `useDefaultWhenDisabled: true`)  |
 | `"disabled"`                 | Feature is disabled                                                |
 | `"error"`                    | An unexpected error occurred during evaluation                     |
 | `"forced"`                   | Matched a forced rule                                              |
@@ -751,20 +901,38 @@ The `evaluateFlag`, `evaluateVariation`, and `evaluateVariable` methods return a
 | `"variable_override_variation"` | Variable overridden by a condition inside a variation           |
 | `"variation_disabled"`       | Feature is disabled; `disabledVariationValue` is returned          |
 
+## Migrating from v2
+
+Roku SDK v3 catches up with JavaScript SDK v3. Breaking changes:
+
+| v2 | v3 |
+|----|----|
+| `createInstance(options)` | `createFeaturevisor(options)` (`createInstance` kept as deprecated alias) |
+| `addHook(hook)` / `removeHook(name)` / `hooks` option | `addModule(module)` / `removeModule(nameOrId)` / `modules` option — same callback shape plus optional `setup`/`close` lifecycle |
+| `logger` option | removed — use `onDiagnostic` (structured diagnostics) and/or `onError` |
+| per-call `options.sticky` on evaluation methods | removed — use instance-level `setSticky()` or child-scoped sticky via `spawn(context, { sticky })` |
+| `setDatafile(datafile)` replaced the datafile | `setDatafile(datafile, replace = false)` merges by default; pass `replace = true` for the old behavior |
+| `stickyFeatures` option | renamed to `sticky` (`stickyFeatures` kept as deprecated alias) |
+
+Behavior changes: typed variable getters no longer coerce (`"5"` is not an integer, `"true"` is not a boolean, arrays are not objects); `defaultVariationValue`/`defaultVariableValue` are applied inside evaluation, so `after` modules see them on the evaluation object.
+
 ## Differences from the JS SDK
 
 The Roku SDK intentionally diverges from the JavaScript SDK in the following ways:
 
 | Feature | Why |
 |---------|-----|
+| v1 (array-shaped) datafile support kept | JS SDK v3 dropped v1 datafiles; the Roku SDK remains additive and supports both v1 and v2 in the same binary. `setDatafile` merging is v2-only — v1 datafiles always replace |
 | `datafileUrl` + HTTP fetch | Roku apps fetch the datafile themselves; there is no built-in fetch API outside the SDK |
 | `refreshInterval` + `startRefreshing()` / `stopRefreshing()` | TV apps need periodic polling; no background threads available |
 | `refresh()` manual method | Caller-driven refresh on app resume |
-| `onReady` / `onRefresh` / `onUpdate` / `onDatafileChanged` / `onContextChanged` / `onStickyChanged` callbacks | Roku uses SGNode field observers, not Promises or EventEmitter |
+| `onReady` / `onRefresh` / `onUpdate` / `onDatafileChanged` / `onContextChanged` / `onStickyChanged` / `onError` callbacks | Roku uses SGNode field observers, not Promises or EventEmitter |
 | `activate()` method | Experiment activation tracking for analytics |
-| `interceptContext` / `configureBucketKey` / `configureBucketValue` callbacks | Legacy callback API; kept alongside the hooks system |
+| `interceptContext` / `configureBucketKey` / `configureBucketValue` callbacks | Legacy callback API; kept alongside the modules system |
 | `initialFeatures` option | Return known defaults before the datafile loads |
-| `spawn()` / child instances | No concrete Roku use case identified; deferred — no equivalent implementation planned |
+| Synchronous module `close()` and `removeModule` | JS returns Promises; BrightScript has no equivalent, so cleanup runs synchronously |
+| `addModule` returns an id string; module `api.onDiagnostic` returns an `{ unsubscribe }` object | JS returns unsubscribe functions; BrightScript has no closures |
+| `"override"` evaluation reason on rule-level enabled overrides | JS uses `"rule"`; kept for backward compatibility |
 
 ## License <!-- omit in toc -->
 
